@@ -117,3 +117,15 @@ Humans should cover:
 - Whether the result should be shipped, revised, or rejected.
 
 Remember: unit tests passing does not prove the product works. Product acceptance is the human role.
+
+## Methodology Gap Check
+
+Use this when a question is not covered.
+
+- What exactly did the user ask?
+- Which current reference failed to cover it?
+- Is the missing piece a stage rule, checklist, role example, risk boundary, standard pattern, or anti-pattern?
+- Which file should be updated?
+- What is the smallest useful addition?
+
+Do not answer with generic advice before the methodology is updated.

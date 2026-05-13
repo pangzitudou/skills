@@ -112,6 +112,12 @@ For non-development work, translate the same flow:
 - Review using a checklist.
 - Keep human approval for high-risk or business-critical decisions.
 
+Use [FIRST_USE.md](FIRST_USE.md) when the user needs a role-specific starting point.
+
 ## Project Usage
 
 A long-lived methodology coach thread can be shared across projects because the methodology is common. Specific execution work should happen in separate project threads. Bring outputs back to the coach thread for review.
+
+## Methodology Evolution
+
+When a question is not covered, treat it as a methodology gap, not as an invitation to improvise. Use [METHODOLOGY_GAPS.md](METHODOLOGY_GAPS.md) to record what is missing and where it should be added.
