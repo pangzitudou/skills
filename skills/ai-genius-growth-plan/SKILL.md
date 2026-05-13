@@ -93,3 +93,4 @@ Small follow-up work can use a lighter path, but still check target, boundary, a
 - Visual flow or interaction uncertainty: use [PROTOTYPING_GUIDE.md](PROTOTYPING_GUIDE.md).
 - Human validation or QA: use [HUMAN_QA_GUIDE.md](HUMAN_QA_GUIDE.md).
 - Long-lived coach thread setup: use [STARTER_PROMPT.md](STARTER_PROMPT.md).
+- Teammate onboarding: use [TEAM_QUICK_START_PROMPT.md](TEAM_QUICK_START_PROMPT.md).
