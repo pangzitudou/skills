@@ -28,15 +28,18 @@ Then respond with:
 - A prompt for an execution thread if useful.
 - What the user should bring back.
 
-## Role-Specific Starting Points
+## Growth Starting Points
 
-### Developer
+These are not role boundaries. They are common starting points for people growing into full-cycle AI-native work.
+
+### Product or Requirement Work
 
 Common starts:
 
 - New requirement: Brainstorm, then Grill Me, then SPEC.
 - Refactor: false constraint check, then ideal design vs migration plan.
 - AI implementation result: tests, smoke E2E, self-review, human acceptance.
+- UI or workflow uncertainty: generate a quick HTML prototype before Plan.
 
 ### Operations
 
@@ -85,4 +88,3 @@ Common starts:
 拿到产物后：
 [告诉用户带什么回来检查]
 ```
-

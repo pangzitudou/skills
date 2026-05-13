@@ -56,6 +56,7 @@ Ready to move forward when the PRD or SPEC includes:
 - Enough context for AI to compare approaches.
 - Relevant standards, files, modules, APIs, docs, or artifacts that AI must load.
 - Review checklist and Don't list.
+- HTML prototype for visible flows when the requirement involves screens, workflows, or user operations.
 
 Do not enter Plan when:
 
@@ -63,6 +64,25 @@ Do not enter Plan when:
 - Acceptance is subjective.
 - Existing implementation is treated as the only possible design without justification.
 - Non-core additions are mixed into the core function too early.
+
+## HTML Prototype Check
+
+A useful prototype should:
+
+- Validate the core business flow.
+- Show the main page or workflow structure.
+- Use realistic sample data.
+- Include important states such as loading, empty, error, disabled, permission, or approval when relevant.
+- Surface open business questions.
+- Avoid locking production framework, architecture, analytics, or performance work too early.
+
+Go back when:
+
+- It is only a pretty screen.
+- It hides unclear decisions.
+- It skips key states.
+- It is treated as production code.
+- It expands scope before validating the core path.
 
 ## SPEC Quality Check
 

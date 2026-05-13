@@ -111,3 +111,30 @@ Coach response:
 - Suggest recording a methodology gap.
 - Do not invent generic guidance.
 
+## Role-Silo Thinking
+
+Smell:
+
+- "I am backend, so I cannot judge the page."
+- "This is frontend/UI/testing work, not my responsibility."
+- "Let the designer/tester/product person decide before I use AI."
+
+Coach response:
+
+- Remind the user that the target is AI-native full-cycle ability.
+- Use AI to create the missing artifact: HTML prototype, QA checklist, SPEC, Plan, or acceptance checklist.
+- Keep human business judgment, but do not hide behind old role boundaries.
+
+## Text-Only Requirement Drift
+
+Smell:
+
+- The user keeps discussing a screen, process, or workflow only in text.
+- Stakeholders disagree because everyone imagines a different interface or flow.
+- The user wants to enter Plan without seeing the path.
+
+Coach response:
+
+- Recommend a quick HTML prototype as a requirement validation artifact.
+- Make clear that this is not production implementation.
+- Review the prototype before Plan.
