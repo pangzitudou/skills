@@ -1,20 +1,13 @@
-# pangzitudou skills
+# Skills
 
-Shared agent skills for team AI-native work.
+## ai-native-methodology-coach
 
-## Skills
+AI 原生方法论教练，帮助团队成员在 Codex / Claude Code 中落地内部 AI 原生开发流程。
 
-- `ai-native-methodology-coach`: Helps teammates adopt the internal AI-native methodology through coaching, prompts, and review checklists.
+它的职责是判断阶段、解释方法论依据、给下一步 prompt、检查 AI 产物是否能进入下一阶段。它不是执行线程，不直接替用户写完整 PRD、技术方案、任务拆解或实现方案。
 
-## Install
-
-```bash
-npx skills add pangzitudou/skills@ai-native-methodology-coach
-```
-
-If your tool does not support the shorthand above, install from the repository path:
+Install:
 
 ```bash
-npx skills add https://github.com/pangzitudou/skills --skill ai-native-methodology-coach
+npx skills add https://github.com/pangzitudou/skills --skill ai-native-methodology-coach -g -y
 ```
-

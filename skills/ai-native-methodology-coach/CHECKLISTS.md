@@ -54,6 +54,8 @@ Ready to move forward when the PRD or SPEC includes:
 - Explicit non-goals.
 - Boundaries, risks, permissions, and data concerns.
 - Enough context for AI to compare approaches.
+- Relevant standards, files, modules, APIs, docs, or artifacts that AI must load.
+- Review checklist and Don't list.
 
 Do not enter Plan when:
 
@@ -61,6 +63,26 @@ Do not enter Plan when:
 - Acceptance is subjective.
 - Existing implementation is treated as the only possible design without justification.
 - Non-core additions are mixed into the core function too early.
+
+## SPEC Quality Check
+
+A good SPEC should:
+
+- Serve both humans and AI.
+- State the purpose, audience, scope, and source of truth.
+- Explain the update rule.
+- Provide execution steps.
+- Include a quick index or standard map when the domain is broad.
+- Name key artifacts, files, APIs, reports, templates, or prompts.
+- Include principles, concrete rules, review checklist, Don't list, and AI upgrade prompt.
+- Keep real constraints and remove false constraints.
+
+Go back to Grill Me when:
+
+- The SPEC cannot explain what problem it standardizes.
+- The SPEC is only a list of implementation details.
+- The SPEC lacks acceptance or review rules.
+- The SPEC would let AI redesign privately without checking shared artifacts.
 
 ## Plan to Tasks
 
@@ -95,4 +117,3 @@ Humans should cover:
 - Whether the result should be shipped, revised, or rejected.
 
 Remember: unit tests passing does not prove the product works. Product acceptance is the human role.
-

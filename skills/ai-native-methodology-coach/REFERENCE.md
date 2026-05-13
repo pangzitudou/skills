@@ -45,6 +45,28 @@ For new or complex work, use this flow:
 
 Brainstorm answers "what should we do and where could this go?" Grill Me answers "are all decisions clear enough to avoid rework?"
 
+## SPEC as Shared Context
+
+A SPEC is not only a requirement document. It is a shared context interface for humans and AI.
+
+It should tell humans:
+
+- What standard to follow.
+- What order to execute.
+- What artifacts are expected.
+- What is forbidden.
+- How to check whether the output is acceptable.
+
+It should tell AI:
+
+- What context to load.
+- What constraints must not be violated.
+- What files, modules, APIs, documents, or artifacts are involved.
+- What prompt or review pattern to use when upgrading or generating work.
+- How to avoid private redesign, drift, and local inconsistency.
+
+For detailed structure, use [SPEC_GUIDE.md](SPEC_GUIDE.md).
+
 ## Prompting Principles
 
 - Do not start with role-play such as "you are an excellent engineer".
@@ -93,4 +115,3 @@ For non-development work, translate the same flow:
 ## Project Usage
 
 A long-lived methodology coach thread can be shared across projects because the methodology is common. Specific execution work should happen in separate project threads. Bring outputs back to the coach thread for review.
-
