@@ -7,7 +7,7 @@
 第一阶段不要追求“所有人立刻完全 AI 化”。更现实的目标是让团队完成几次低风险、可复盘的成功体验：
 
 - 知道新需求应该先 Brainstorm 和 Grill Me，而不是直接写代码。
-- 知道 SPEC / Plan / Tasks / Implementation / Acceptance 的阶段边界。
+- 知道 Brainstorm / Grill Me / Prototype / SPEC / Plan / Tasks / Implementation / Human QA / Acceptance 的阶段边界。
 - 知道如何把任务交给 AI 执行线程，而不是自己替 AI 规定实现路径。
 - 知道如何检查 AI 产物，而不是盲目信任或盲目否定。
 - 知道人工 QA 的新角色：人作为 AI 的手、脚、眼睛和业务判断器，而不是回到旧式手工测试。

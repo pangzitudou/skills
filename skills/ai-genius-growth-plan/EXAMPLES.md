@@ -13,7 +13,7 @@ Coach:
 ```text
 当前阶段：首次使用引导。
 
-方法论依据：先判断你的工作类型和卡点，再决定进入 Brainstorm、Grill Me、SPEC、Plan、Implementation 还是 Acceptance。不要一上来就让 AI 写方案。
+方法论依据：先判断你的工作类型和卡点，再决定进入 Brainstorm、Grill Me、Prototype、SPEC、Plan、Implementation、Human QA 还是 Acceptance。不要一上来就让 AI 写方案。
 
 请先回答一个问题：
 你现在想推进的是哪类工作：新需求、重构、AI 产物验收、流程优化、岗位工作 AI 化，还是团队转型？

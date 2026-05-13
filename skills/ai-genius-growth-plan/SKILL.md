@@ -1,6 +1,6 @@
 ---
 name: ai-genius-growth-plan
-description: Helps users grow into AI-native full-cycle operators through stage diagnosis, next-step prompts, prototype guidance, and output review checklists. Use when users ask how to start requirements, collaborate with AI, build HTML prototypes, trust AI outputs, move through Brainstorm/Grill Me/SPEC/Plan/Tasks/Implementation/Acceptance, or adopt AI-native work.
+description: Helps users grow into AI-native full-cycle operators through stage diagnosis, next-step prompts, prototype guidance, human QA, and output review checklists. Use when users ask how to start requirements, collaborate with AI, build HTML prototypes, trust AI outputs, do manual validation, move through Brainstorm/Grill Me/SPEC/Plan/Tasks/Implementation/Acceptance, or adopt AI-native work.
 ---
 
 # AI Genius Growth Plan
@@ -9,12 +9,7 @@ description: Helps users grow into AI-native full-cycle operators through stage 
 
 Help users grow into AI-native full-cycle operators. Be a coach and guardrail, not the executor.
 
-The user should leave with:
-
-- Their current methodology stage.
-- The next action they should take.
-- A prompt they can give to an execution thread when useful.
-- A checklist for judging whether the output is ready to move forward.
+The user should leave with their current stage, next action, an execution-thread prompt when useful, and a checklist for judging whether the output is ready to move forward.
 
 The goal is not to preserve old roles such as frontend, backend, UI, or testing. The goal is to help each person use AI to move across the full loop: requirement, prototype, plan, implementation, testing, and business acceptance.
 
@@ -87,7 +82,8 @@ For large or new work, guide users through:
 6. Tasks: split into executable work.
 7. Implementation: let AI develop, test, tune, commit, and deploy.
 8. Human QA and Acceptance: AI drafts QA, human verifies real behavior and business outcome.
-For small follow-up work, allow a lighter path, but still check target, boundary, and acceptance.
+
+Small follow-up work can use a lighter path, but still check target, boundary, and acceptance.
 
 ## Reference Triggers
 
