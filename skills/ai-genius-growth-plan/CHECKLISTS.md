@@ -127,16 +127,38 @@ AI should cover:
 - Unit tests for core logic.
 - Smoke-level E2E where possible.
 - Self-review of changes.
+- QA checklist generation.
 - Fixes after test or browser feedback.
 
 Humans should cover:
 
+- Real or staging environment operation.
+- Evidence capture: screenshots, logs, URLs, timestamps, and exact data.
 - Whether the output achieves the business goal.
 - Whether the user experience or operational process is acceptable.
 - Whether risk boundaries were respected.
 - Whether the result should be shipped, revised, or rejected.
 
 Remember: unit tests passing does not prove the product works. Product acceptance is the human role.
+
+## Human QA Check
+
+Ready for business acceptance when:
+
+- AI generated a step-by-step QA plan.
+- Human ran the happy path in a real or staging environment.
+- Human checked key states: loading, empty, error, disabled, permission, approval, pagination, or data edge cases when relevant.
+- Failures were reported with steps, actual result, expected result, evidence, and business impact.
+- AI fixed or explained failures.
+- The human can state whether the business goal is achieved.
+
+Go back when:
+
+- The user only clicked around without a QA plan.
+- AI only says "tests passed".
+- Failures are described vaguely.
+- Human begins manual code debugging instead of feeding evidence back to AI.
+- The final decision is based on technical confidence rather than business acceptance.
 
 ## Methodology Gap Check
 

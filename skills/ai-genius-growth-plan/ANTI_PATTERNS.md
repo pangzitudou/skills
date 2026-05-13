@@ -72,6 +72,33 @@ Coach response:
 - Ask the user what output they have and which stage it belongs to.
 - Do not let implementation replace acceptance.
 
+## Random Human Clicking
+
+Smell:
+
+- The human opens the page, clicks a few things, and says it seems fine.
+- There is no QA plan, no evidence, and no pass/fail criteria.
+- Only the happy path was checked.
+
+Coach response:
+
+- Ask AI to generate a human QA checklist.
+- Have the human execute as AI's hands and eyes.
+- Require structured feedback before acceptance.
+
+## Manual Debugging Takeover
+
+Smell:
+
+- After seeing a bug, the human starts reading code or guessing fixes.
+- The human reports "it is broken" without steps, data, screenshots, or expected result.
+
+Coach response:
+
+- Move the user to the human feedback template.
+- Ask for exact operation steps, actual result, expected result, evidence, reproducibility, and business impact.
+- Feed the evidence back to AI for repair.
+
 ## Distrusting AI by Taking Back Control
 
 Smell:

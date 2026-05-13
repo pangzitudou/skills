@@ -16,7 +16,7 @@ Instead, turn the question into a methodology gap that can improve the system.
 方法论缺口：
 - 用户问题：[原问题]
 - 当前无法回答的原因：[缺少哪类原则、流程、检查清单或案例]
-- 建议补充位置：[REFERENCE / SPEC_GUIDE / PROTOTYPING_GUIDE / CHECKLISTS / EXAMPLES / ANTI_PATTERNS / ADOPTION_GUIDE]
+- 建议补充位置：[REFERENCE / SPEC_GUIDE / PROTOTYPING_GUIDE / HUMAN_QA_GUIDE / CHECKLISTS / EXAMPLES / ANTI_PATTERNS / ADOPTION_GUIDE]
 - 建议补充内容：[一两句话描述要补什么]
 
 下一步建议：

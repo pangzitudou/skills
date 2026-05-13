@@ -39,6 +39,7 @@ Common starts:
 - New requirement: Brainstorm, then Grill Me, then SPEC.
 - Refactor: false constraint check, then ideal design vs migration plan.
 - AI implementation result: tests, smoke E2E, self-review, human acceptance.
+- AI says it is done: ask AI for a human QA checklist, then execute as AI's hands and eyes.
 - UI or workflow uncertainty: generate a quick HTML prototype before Plan.
 
 ### Operations

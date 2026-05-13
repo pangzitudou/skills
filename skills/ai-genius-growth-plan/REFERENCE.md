@@ -23,7 +23,7 @@ An AI-native full-cycle operator can:
 - Use quick prototypes to make abstract ideas visible.
 - Ask AI for plans and task breakdowns.
 - Let AI implement, test, and tune.
-- Use checklists and human judgment to accept business outcomes.
+- Act as AI's hands, feet, eyes, and business judgment during QA and acceptance.
 
 ## Maximum Value
 
@@ -55,7 +55,7 @@ For new or complex work, use this flow:
 5. Plan: ask AI for multiple technical approaches after the requirement is clear.
 6. Tasks: split the chosen plan into executable tasks.
 7. Implementation: let AI develop, test, tune, commit, and deploy.
-8. Acceptance: human checks whether the result achieves the business goal.
+8. Human QA and Acceptance: AI drafts QA, human verifies real behavior and business outcome.
 
 Brainstorm answers "what should we do and where could this go?" Grill Me answers "are all decisions clear enough to avoid rework?"
 
@@ -114,11 +114,14 @@ Testing is layered:
 
 1. Unit tests: AI can write these and cover basic logic, but passing unit tests does not prove the real product works.
 2. E2E tests: AI plus tools such as Playwright can cover smoke-level behavior, but reliability is still limited.
-3. Product acceptance: humans verify the business outcome.
+3. Human QA: humans act as AI's hands, feet, and eyes in real or staging environments.
+4. Product acceptance: humans verify the business outcome.
 
 Improve testing by asking AI to propose QA plans, asking AI to self-review, and using another AI to find missing cases.
 
 Add analytics, performance tuning, and similar non-core work late. Early extra requirements can distract AI from the core function.
+
+Use [HUMAN_QA_GUIDE.md](HUMAN_QA_GUIDE.md) when the user needs manual validation steps, bug feedback templates, or acceptance guidance.
 
 ## Team Adoption
 
