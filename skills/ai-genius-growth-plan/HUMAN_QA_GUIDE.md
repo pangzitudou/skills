@@ -13,17 +13,18 @@ Use this after implementation and before final acceptance.
 The loop is:
 
 1. AI generates a QA plan.
-2. Human executes the plan in the real environment.
+2. Human executes the plan in the real or staging environment.
 3. Human reports evidence and failures.
 4. AI fixes issues and updates tests or docs.
 5. Human re-runs focused checks.
 6. Human gives business acceptance or sends it back.
+7. If a reusable rule changed, run SPEC impact analysis after acceptance.
 
 ## Responsibility Boundary
 
 AI should:
 
-- Read the requirement, SPEC, Plan, implementation notes, and known risks.
+- Read the requirement artifact, applicable `comm/` specs, Plan, implementation notes, and known risks.
 - Generate a step-by-step QA checklist.
 - Explain what to click, enter, observe, screenshot, or record.
 - Define pass/fail criteria for each step.
@@ -46,6 +47,7 @@ Human should not:
 - Click around randomly and call it tested.
 - Start debugging code manually before feeding evidence back to AI.
 - Accept the result only because AI says tests passed.
+- Update shared SPEC rules before the behavior is accepted as reusable.
 
 ## QA Plan Prompt
 
@@ -57,6 +59,7 @@ Human should not:
 
 需求目标：[填写]
 验收标准：[填写]
+适用的 comm/ SPEC 或项目约束：[填写，没有则写无]
 实现说明或变更摘要：[填写]
 测试环境/地址：[填写]
 已知风险或重点关注点：[填写]
@@ -70,6 +73,7 @@ Human should not:
 6. 每一步的通过/失败标准
 7. 失败时需要我提供的证据
 8. 是否可以进入业务验收的判断标准
+9. 如果发现可复用规则变化，是否需要后续做 SPEC 影响分析
 ```
 
 ## Human Feedback Template
@@ -96,6 +100,7 @@ QA 反馈：
 - AI plus tools: smoke-level browser or E2E checks.
 - Human QA: real environment, real operations, evidence capture, complex interaction, state verification.
 - Business acceptance: whether the outcome achieves the business goal and can be shipped.
+- SPEC maintenance: after acceptance, update shared rules only if a reusable standard changed.
 
 ## Human QA Checklist
 

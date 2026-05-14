@@ -4,7 +4,7 @@ Use this when the user asks something not covered by the bundled methodology.
 
 ## Principle
 
-The first version is strict. If the methodology does not cover the question, do not improvise a generic answer.
+The methodology is strict. If it does not cover the question, do not improvise generic advice.
 
 Instead, turn the question into a methodology gap that can improve the system.
 
@@ -29,5 +29,5 @@ Instead, turn the question into a methodology gap that can improve the system.
 - Missing checklist: the methodology has a principle but no review method.
 - Missing role example: the situation is non-development and lacks a role-specific example.
 - Missing risk boundary: the methodology does not say where human approval is required.
-- Missing standard pattern: the user needs a SPEC or standard type not yet described.
+- Missing SPEC system pattern: the user needs a `comm/` standard or project entrypoint pattern not yet described.
 - Missing anti-pattern: a repeated bad habit is visible but not yet named.

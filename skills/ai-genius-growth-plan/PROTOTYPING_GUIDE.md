@@ -2,9 +2,9 @@
 
 ## Principle
 
-Quick HTML prototypes are not a specialist role task. They are AI-native requirement validation.
+Quick HTML prototypes are AI-native requirement validation, not frontend implementation.
 
-Use them to make abstract requirements visible before the team locks into Plan, Tasks, or implementation. This is especially important for people who are not comfortable thinking visually. The goal is not to become a UI specialist. The goal is to use AI to create a visible artifact that helps everyone judge the requirement.
+Use them to make abstract requirements visible before the team locks into Plan, Tasks, or implementation. The goal is not to become a UI specialist. The goal is to create a visible artifact that helps humans and AI judge flow, information architecture, states, and business acceptance.
 
 ## When to Prototype
 
@@ -30,10 +30,10 @@ For new or visual work:
 1. Brainstorm possible directions.
 2. Grill Me to challenge decisions.
 3. Generate a quick HTML prototype to validate visible flow and states.
-4. Convert what was learned into SPEC.
-5. Enter Plan after the requirement is clearer.
+4. Review the prototype and extract confirmed requirement decisions.
+5. Decide whether to revise the prototype, write/update the requirement artifact, enter Plan, or run SPEC impact analysis.
 
-The prototype can also happen after SPEC if the SPEC is clear but stakeholders still need a visual validation artifact.
+Prototype can inform `comm/` SPEC updates only when it reveals reusable rules. Do not convert every prototype directly into SPEC.
 
 ## Prototype Rules
 
@@ -41,10 +41,10 @@ The prototype can also happen after SPEC if the SPEC is clear but stakeholders s
 - Prefer a single self-contained HTML file unless the execution context already has a better local pattern.
 - Focus on flow, layout, information hierarchy, and states.
 - Include realistic sample data.
-- Include loading, empty, error, disabled, and permission states when relevant.
+- Include loading, empty, error, disabled, permission, approval, and pagination states when relevant.
 - Avoid early analytics, performance tuning, animations, and visual polish unless they are core to the requirement.
 - Do not lock a framework or stack unless it is a real constraint.
-- Bring the prototype back for checklist review before Plan.
+- Bring the prototype back for review before Plan.
 
 ## Execution Prompt
 
@@ -56,6 +56,7 @@ The prototype can also happen after SPEC if the SPEC is clear but stakeholders s
 - 优先做成单个自包含 HTML 文件。
 - 重点验证流程、信息架构、页面结构、关键状态和业务验收点。
 - 不要加入非核心的埋点、性能优化、复杂动画或过度视觉装饰。
+- 不要把原型中的临时设计当成通用 SPEC。
 
 需求目标：[填写]
 目标用户/使用者：[填写]
@@ -72,6 +73,31 @@ The prototype can also happen after SPEC if the SPEC is clear but stakeholders s
 5. 哪些内容不应该在此阶段加入
 ```
 
+## Prototype Review Prompt
+
+```text
+请基于这个 prototype 做一次原型复盘，不要写技术方案，不要拆任务，不要进入实现。
+
+原型材料：
+[粘贴链接/截图/HTML/说明]
+
+请输出：
+1. 原型覆盖的核心用户路径
+2. 已经被原型验证成立的需求点
+3. 原型暴露出的未确认问题
+4. 可以删除或延后的非核心内容
+5. 需要补充验证的关键状态：loading、empty、error、disabled、permission、approval、pagination 等
+6. 是否存在技术偏好、历史实现或视觉装饰干扰需求判断
+7. 哪些结论可以进入需求产物
+8. 哪些内容还不能进入 Plan
+9. 是否需要做 SPEC 规范体系影响分析；如果需要，只说明影响领域和原因，不要直接写完整 SPEC
+
+请特别注意：
+以需求为中心，不要被技术偏好或历史实现绑架。
+做加法前，先做减法。
+这不是实现验收，而是需求和流程验证。
+```
+
 ## Review Checklist
 
 The prototype is useful when:
@@ -83,6 +109,7 @@ The prototype is useful when:
 - It exposes open questions or hidden assumptions.
 - Stakeholders can accept, reject, or revise the flow.
 - It does not pretend to be production implementation.
+- It produces clear input for the requirement artifact or Plan.
 
 Go back when:
 
@@ -91,3 +118,4 @@ Go back when:
 - It skips important states.
 - It hides unclear business decisions behind UI decoration.
 - It expands scope before the core path is accepted.
+- It tries to turn one-off prototype choices into shared SPEC rules without review.

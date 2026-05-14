@@ -1,16 +1,17 @@
 # AI 天才成长计划迁移指南
 
-这份文档给团队负责人、CTO 或推动者使用。它不属于 skill 的运行时知识库，而是帮助团队平稳导入 AI 原生开发方式。
+这份文档给团队负责人、CTO 或推动者使用。它不属于 skill 的运行时知识库，而是帮助团队平稳导入 AI 原生工作方式。
 
 ## 迁移目标
 
 第一阶段不要追求“所有人立刻完全 AI 化”。更现实的目标是让团队完成几次低风险、可复盘的成功体验：
 
-- 知道新需求应该先 Brainstorm 和 Grill Me，而不是直接写代码。
-- 知道 Brainstorm / Grill Me / Prototype / SPEC / Plan / Tasks / Implementation / Human QA / Acceptance 的阶段边界。
+- 知道新需求应先 Brainstorm 和 Grill Me，而不是直接写代码。
+- 知道 Brainstorm / Grill Me / Prototype / Requirement / Plan / Tasks / Implementation / Human QA / Acceptance 的阶段边界。
+- 知道 SPEC 是 `comm/` 里的团队共享规范体系，是约束和上下文层，不是主流程核心。
 - 知道如何把任务交给 AI 执行线程，而不是自己替 AI 规定实现路径。
 - 知道如何检查 AI 产物，而不是盲目信任或盲目否定。
-- 知道人工 QA 的新角色：人作为 AI 的手、脚、眼睛和业务判断器，而不是回到旧式手工测试。
+- 知道人工 QA 的新角色：人作为 AI 的手、脚、眼睛和业务判断器。
 
 ## 推荐导入节奏
 
@@ -28,9 +29,10 @@
 优先选择：
 
 - 内部工具的小需求。
-- 已有需求的 PRD / Plan 检查。
+- 已有需求的需求产物 / Plan 检查。
 - 小范围重构前的约束澄清。
 - 流程自动化的 Brainstorm。
+- 一个项目的 `AGENTS.md` / `CLAUDE.md` 引用 `comm/` 规范试点。
 
 暂时避免：
 
@@ -42,11 +44,71 @@
 ### 第 3-4 周：形成团队习惯
 
 - 每个新需求先问 coach：“我该从哪一步开始？”
-- 每份 PRD 进入 Plan 前先过检查清单。
+- 每个可见流程优先快速 HTML 原型验证。
+- 每份需求产物进入 Plan 前先过检查清单。
 - 每份 Plan 拆任务前先检查是否被技术偏好或历史实现污染。
 - 每次实现后保留人工业务验收。
 - 每次上线前让 AI 生成 QA 清单，人按真实环境执行并反馈证据。
-- 收集“方法论没有覆盖的问题”，定期补充方法论。
+- 如果一个规则反复出现，再做 SPEC 影响分析，决定是否更新 `comm/`。
+
+## SPEC 系统导入
+
+SPEC 系统建议单独作为团队基础设施推进，不要混进每个单次需求里。
+
+最小可行结构：
+
+```text
+comm/
+  README.md
+  SYSTEM_DOCUMENTATION_STANDARD.md
+  INTERNAL_UI_DESIGN_SPEC.md
+  ...
+
+project/
+  AGENTS.md / CLAUDE.md / README.md
+```
+
+导入顺序：
+
+1. 建立 `comm/README.md` 标准地图。
+2. 选一个最常漂移的领域写第一份标准，例如 UI、接口、文档或测试。
+3. 在一个试点项目的 `AGENTS.md` / `CLAUDE.md` 引用它。
+4. 让执行线程基于入口文件读取规范，而不是每次复制粘贴。
+5. 每次只做最小规范变更，避免过度标准化。
+
+`comm/README.md` 建议用这四列做标准地图：
+
+| 分组 | 文档名 | 解决什么 | 关键产物 |
+| --- | --- | --- | --- |
+| 工程与文档 | `SYSTEM_DOCUMENTATION_STANDARD.md` | 根 README、docs/README、API 文档、维护职责 | 文档中心、职责矩阵、发版自检 |
+| 界面与体验 | `INTERNAL_UI_DESIGN_SPEC.md` | 内部系统视觉、布局、组件、状态一致 | tokens、基础 CSS、页面骨架 |
+| 身份与安全 | `*_LOGIN_AND_PERM_SPEC.md` | 登录、身份主键、权限模型 | 用户表、权限矩阵、UI 骨架 |
+| 审计与日志 | `AUDIT_AND_LOGGING_SPEC.md` | 业务可追溯、不可抵赖、对外 API 日志 | audit 表、写审计方法 |
+| 对外开放 | `EXTERNAL_OPEN_API_PLATFORM_STANDARD.md` | 开放 API 鉴权、密钥、路径、管理端 | API 前缀、客户端文档、Swagger |
+| 性能运维 | `PERFORMANCE_TESTING_AND_OPTIMIZATION_STANDARD.md` | 功能完成后的性能、容量、回归与上线验收 | 测试计划、报告、优化记录 |
+| 安全扫描 | `SECURITY_SCANNING_AND_REMEDIATION_STANDARD.md` | 上线前/重大改造后的扫描、分级、复测 | 扫描计划、报告、修复记录 |
+| 技术选型 | `WEB_SERVICE_TECH_STACK_STANDARD.md` | 默认服务栈和工程脚手架约束 | `.env.example`、migration、Docker |
+
+第一批最推荐建立：
+
+1. `SYSTEM_DOCUMENTATION_STANDARD.md`：先管文档怎么写，防止一开始就失控。
+2. `INTERNAL_UI_DESIGN_SPEC.md`：内部系统最容易视觉和交互漂移，适合快速见效。
+3. 一个与你们业务最重复的集成或 API 标准：例如开放 API、企微登录、审计日志。
+
+暂时不要急着建立：
+
+- 没有真实重复场景的细分规范。
+- 只为某个项目服务的一次性规范。
+- 还没经过原型或验收验证的 UI 细节。
+- 性能、安全扫描等后置门禁，除非当前业务已经有真实上线风险。
+
+`SYSTEM_DOCUMENTATION_STANDARD.md` 至少要管住：
+
+- 根 `README.md` 只放项目定位、本地运行、测试命令、文档中心入口。
+- `docs/README.md` 负责按角色阅读顺序、文档职责矩阵、维护规则。
+- `AGENTS.md` / `CLAUDE.md` 负责 AI 入口：项目概览、引用哪些 `comm` 规范、本项目特殊约束和验证命令。
+- API 字段、错误码、鉴权规则只能有一个权威文档。
+- 发版前检查死链、重复表格、API 同步、入口文件引用有效性。
 
 ## 管理者要避免的错误
 
@@ -54,8 +116,12 @@
 - 不要要求大家一次性掌握全部方法论。
 - 不要用“AI 是否一次做对”判断这套方法是否可行。
 - 不要鼓励员工把旧工作方式直接搬进 AI。
-- 不要把前端、后端、UI、测试的旧式分工继续搬进 AI 原生开发；每个人都要补齐从需求到验收的闭环能力。
+- 不要把前端、后端、UI、测试的旧式分工继续搬进 AI 原生开发。
+- 不要把单次需求、原型细节或技术偏好沉淀成通用 SPEC。
 - 不要让 AI 产物绕过业务验收。
+- 不要让根 README、docs/README 和 API 文档重复维护同一套长表。
+- 不要让关键约束只存在于聊天记录里。
+- 不要让项目入口文件引用已经不存在的 `comm` 路径。
 
 ## 成功指标
 
@@ -66,6 +132,7 @@
 - 是否能明确区分教练线程和执行线程。
 - 是否能说清每个 AI 产物的下一阶段判断。
 - 是否开始沉淀方法论缺口。
+- 是否开始用 `comm/` 约束重复漂移，而不是用它承载所有需求。
 
 ## 推广话术
 

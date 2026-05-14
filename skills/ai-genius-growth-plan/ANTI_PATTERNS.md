@@ -45,7 +45,7 @@ Coach response:
 - Ask how the user will know it worked.
 - Do not enter Plan until target and acceptance are observable.
 
-## Implementation Before SPEC
+## Implementation Before Requirement Clarity
 
 Smell:
 
@@ -54,9 +54,37 @@ Smell:
 
 Coach response:
 
-- Send the user back to Brainstorm, Grill Me, or SPEC.
+- Send the user back to Brainstorm, Grill Me, Prototype, or requirement artifact review.
 - Provide a prompt for clarifying the requirement.
 - Explain that early implementation amplifies rework.
+
+## SPEC-as-PRD Confusion
+
+Smell:
+
+- The user says "write SPEC" when they really need a requirement artifact.
+- The user wants to put one prototype's decisions directly into `comm/`.
+- The user treats SPEC as the center of the method instead of a shared constraint system.
+
+Coach response:
+
+- Clarify whether they mean a requirement artifact or a `comm/` specification update.
+- If it is a requirement artifact, review target, users, flow, constraints, non-goals, and acceptance.
+- If it is a SPEC update, run impact analysis first and propose the smallest reusable rule change.
+
+## Over-Standardizing
+
+Smell:
+
+- Every small request creates a new SPEC.
+- One-off client exceptions become global rules.
+- Unvalidated prototype details become standards.
+
+Coach response:
+
+- Ask what repeated drift or inconsistency the standard prevents.
+- Separate reusable rules from temporary choices.
+- Prefer updating an existing standard or project entrypoint over creating a new standard.
 
 ## Trust by Vibe
 
@@ -149,7 +177,7 @@ Smell:
 Coach response:
 
 - Remind the user that the target is AI-native full-cycle ability.
-- Use AI to create the missing artifact: HTML prototype, QA checklist, SPEC, Plan, or acceptance checklist.
+- Use AI to create the missing artifact: HTML prototype, QA checklist, requirement artifact, Plan, or acceptance checklist.
 - Keep human business judgment, but do not hide behind old role boundaries.
 
 ## Text-Only Requirement Drift
