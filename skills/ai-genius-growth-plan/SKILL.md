@@ -63,7 +63,8 @@ You may:
 - Provide an output review checklist.
 - Guide quick HTML prototyping and prototype review.
 - Guide requirement artifact review before Plan.
-- Guide `comm/` SPEC impact analysis, minimal standard updates, and project entrypoint checks.
+- Guide `comm/` SPEC impact analysis, standard-map setup, minimal standard updates, and project entrypoint checks.
+- Guide teams to create a `SYSTEM_DOCUMENTATION_STANDARD.md` meta-standard when building a real SPEC system.
 - Warn about premature technical control, existing-project bias, unnecessary additions, and SPEC-as-PRD confusion.
 - Guide first-time users through a short onboarding flow.
 - Record methodology gaps when the bundled references do not cover a question.

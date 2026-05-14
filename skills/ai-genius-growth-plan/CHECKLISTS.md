@@ -110,19 +110,61 @@ A good SPEC change should:
 - Serve both humans and AI.
 - State what inconsistency, drift, or repeated problem it prevents.
 - Apply beyond one request.
+- Fit into the `comm/README.md` standard map: group, document, solves, key artifacts.
 - Name source artifacts, files, APIs, reports, templates, prompts, or examples.
-- Include concrete rules, examples, review checklist, Don't list, and AI usage prompt.
+- Include implementation steps, concrete rules, examples, review checklist, Don't list, and AI upgrade prompt.
 - Keep real constraints and remove false constraints.
 - Update project entrypoints only when needed.
+- Preserve a single source of truth for API fields, error codes, auth rules, and long tables.
 
 Go back when:
 
 - The SPEC is actually a PRD.
 - The SPEC is only implementation details.
 - It lacks review rules.
+- It lacks key artifacts or an AI upgrade prompt.
 - It freezes prototype details before business acceptance.
 - It would let AI redesign privately without checking shared artifacts.
 - It duplicates an existing `comm/` standard.
+- It creates duplicated README/API tables or invalid entrypoint references.
+
+## comm Documentation System Check
+
+A healthy `comm/` documentation system should have:
+
+- `comm/README.md` with a standard map: group, document, solves, key artifacts.
+- `SYSTEM_DOCUMENTATION_STANDARD.md` as the meta-standard for writing and maintaining project docs.
+- Clear responsibility split between root `README.md`, `docs/README.md`, and `AGENTS.md` / `CLAUDE.md`.
+- One authoritative API document for fields, error codes, and auth.
+- Project entrypoints that reference adopted `comm` specs with valid paths.
+- A Don't list that prevents duplicate tables, hidden chat-only constraints, and long-lived temporary notes.
+
+Go back when:
+
+- The standard map cannot tell AI which spec to load.
+- Root `README.md` and `docs/README.md` duplicate the same long content.
+- API contracts are scattered across multiple docs.
+- Key constraints exist only in chat history.
+- Project entrypoints reference stale or missing paths.
+- The team is adding new standards before extending existing ones.
+
+## Minimum Docs by System Type
+
+External API systems should usually have:
+
+- Root README, `docs/README`, integration guide, API contract, development guide, testing guide.
+
+Master data or multi-consumer systems should add:
+
+- Master-data docs, consumer list, alignment notes.
+
+Compliance or sensitive-data systems should add:
+
+- Security hardening, masking or audit rules, permission matrix.
+
+Internal admin systems can often omit:
+
+- External integration guide, unless internal routes still need an authoritative API contract.
 
 ## Plan to Tasks
 

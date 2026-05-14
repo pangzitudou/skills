@@ -41,6 +41,68 @@ project/
 
 The categories above are examples, not law. The important pattern is: shared reusable rules live in `comm/`; project entrypoints reference them and add local context.
 
+## Standard Map
+
+`comm/README.md` should work as the routing table for humans and AI.
+
+Use this minimum table:
+
+| Group | Document | Solves | Key artifacts |
+| --- | --- | --- | --- |
+| Identity and security | `WECOM_LOGIN_AND_PERM_SPEC.md` | Login, user identity alignment, permission model | User tables, permission UI skeleton |
+| Audit and logging | `AUDIT_AND_LOGGING_SPEC.md` | Traceable business audit and API logs | `audit_log`, `write_audit` |
+| External API | `EXTERNAL_OPEN_API_PLATFORM_STANDARD.md` | Unified external API shape, auth, keys, encrypted storage, admin UI | `/open/v1/*`, client docs, Swagger |
+| Integration | `*_INTEGRATION.md` | Third-party identity, API, and message flows | identity maps, API keys, robot ids |
+| UI and experience | `INTERNAL_UI_DESIGN_SPEC.md` | Internal system visual and interaction consistency | `tokens.css`, `app.css`, base layout |
+| Engineering docs | `SYSTEM_DOCUMENTATION_STANDARD.md` | Repository docs, README roles, API/doc ownership | docs structure, responsibility matrix |
+| Performance and operations | `PERFORMANCE_TESTING_AND_OPTIMIZATION_STANDARD.md` | Performance testing, capacity, regression, release checks | test plan, report, optimization log |
+| Security scanning | `SECURITY_SCANNING_AND_REMEDIATION_STANDARD.md` | Pre-release scan, risk grading, remediation and retest | scan plan, report, fix log, blockers |
+| Tech stack and access layer | `WEB_SERVICE_TECH_STACK_STANDARD.md`, `BFF_ACCESS_LAYER_STANDARD.md` | Default stack and client access boundary | `.env.example`, migrations, BFF APIs, DTO validation |
+
+The coach should treat this as a pattern, not a required taxonomy. Add a group only when it solves repeated drift.
+
+## Documentation Meta-Standard
+
+A mature SPEC system should include `SYSTEM_DOCUMENTATION_STANDARD.md`. It defines how project documentation is written and prevents duplicate, stale, or hidden knowledge.
+
+Recommended implementation steps:
+
+1. Decide the official docs root. New projects should usually use `docs/`.
+2. Trim root `README.md` to project positioning, local run command, test command, optional directory sketch, and link to the docs center.
+3. Create `docs/README.md` as the docs center with role-based reading order, document responsibility matrix, and maintenance rules.
+4. Register adopted `comm` specs in `README.md`, `AGENTS.md`, or `CLAUDE.md`.
+5. Choose the authoritative API document. API fields, error codes, and auth rules should live in one place.
+6. Create special docs only when needed: permission, audit, masking, performance, security, deployment, master-data integration.
+7. Before release, check dead links, duplicated tables, API sync, and valid project entrypoint references.
+
+README responsibility split:
+
+| File | Readers | Must contain |
+| --- | --- | --- |
+| Root `README.md` | First-time cloners, CI, people who only glance | One-line positioning, local run command, test command, optional directory sketch, docs center link |
+| `docs/README.md` | Developers, testers, integrators, product readers | Role-based reading order, document responsibility matrix, maintenance rules |
+| `AGENTS.md` / `CLAUDE.md` | AI execution threads | Project overview, adopted `comm` specs, project-specific constraints, verification commands |
+
+Common project docs:
+
+| Purpose | Suggested names |
+| --- | --- |
+| System overview | `SYSTEM_UNDERSTANDING.md`, `OVERVIEW.md` |
+| Development | `DEVELOPMENT.md`, `DEVELOPMENT_GUIDE.md` |
+| External integration | `INTEGRATION.md`, `INTEGRATION_GUIDE.md` |
+| HTTP/Open API contract | `API.md`, `API_SPEC_FINAL.md` |
+| Testing and acceptance | `TESTING.md`, `FULL_TEST_GUIDE.md` |
+| Deployment and operations | `DEPLOYMENT.md` |
+| Product/design master | `SYSTEM_DESIGN*.md`, prototype HTML, SQL sketches |
+| Permission and security | `PERMISSION_MATRIX.md`, `*_RULES.md`, `SECURITY_HARDENING.md` |
+
+Minimum docs by system type:
+
+- External API: root README, `docs/README`, integration guide, API contract, development guide, testing guide.
+- Master data or many downstream consumers: the above plus master-data docs, consumer list, alignment notes.
+- Compliance or sensitive data: the above plus security hardening, masking/audit rules, permission matrix.
+- Internal admin only: integration guide can often be omitted; internal APIs should still have one authoritative contract when routes matter.
+
 ## When to Touch SPEC
 
 Use SPEC work when:
@@ -87,12 +149,14 @@ A useful `comm/` SPEC should usually include:
 4. Non-scope: where it must not be applied.
 5. Source of truth: related files, APIs, modules, examples, or owner documents.
 6. Relationship to other specs: which standards should be loaded before or after it.
-7. Rules: concrete reusable rules, not vague principles.
-8. Examples: small examples that show the expected pattern.
-9. Don't list: things humans and AI must not do.
-10. Review checklist: how to judge whether an output follows the spec.
-11. AI usage prompt: a copyable prompt for execution threads.
-12. Version and change log: what changed and why.
+7. Developer implementation steps: the shortest path humans and AI should follow.
+8. Key artifacts: files, tables, tokens, APIs, templates, reports, prompts, or screenshots controlled by the spec.
+9. Rules: concrete reusable rules, not vague principles.
+10. Examples: small examples that show the expected pattern.
+11. Don't list: things humans and AI must not do.
+12. Review checklist: how to judge whether an output follows the spec.
+13. AI upgrade prompt: a copyable prompt for execution threads to apply the spec to a project.
+14. Version and change log: what changed and why.
 
 Keep it constraint-light. A good SPEC removes false constraints and keeps only rules that protect consistency, safety, maintainability, or business acceptance.
 
@@ -114,8 +178,51 @@ Keep it constraint-light. A good SPEC removes false constraints and keeps only r
 - It turns a prototype's temporary UI into a permanent standard too early.
 - It adds many rules before removing false constraints.
 - It has principles but no checks.
+- It has no key artifacts, so AI cannot tell what to modify or verify.
+- It lacks an AI upgrade prompt, so every execution thread reinvents how to apply it.
 - It is readable by humans but gives AI no routing, files, artifacts, or prompt.
 - It is useful to AI but unreadable or unreviewable by humans.
+
+## Hard Don'ts for SPEC Systems
+
+- Do not duplicate the same long table in root `README.md` and `docs/README.md`.
+- Do not maintain the same API field table in multiple documents.
+- Do not change an interface without updating the authoritative API document.
+- Do not keep long-lived "temporary notes" beside official docs.
+- Do not leave key development constraints only in chat history.
+- Do not let `AGENTS.md`, `CLAUDE.md`, or `README.md` reference missing `comm` paths.
+- Do not create a new SPEC when an existing standard can be extended cleanly.
+- Do not add performance, security scanning, or operational gates before the core function is accepted unless they are real constraints.
+
+## Build a SPEC System Prompt
+
+```text
+请帮我为团队建立一个最小可用的 comm/ SPEC 规范体系。
+
+注意：
+- SPEC 是团队共享规范文档体系，不是单次需求 PRD。
+- 目标是让人能照着做，让 AI 能作为上下文执行。
+- 先做最小体系，不要一次性设计过多规范。
+
+团队/项目背景：
+[填写]
+
+当前最容易漂移的问题：
+[例如 UI、API、文档、权限、审计、测试、部署]
+
+已有项目入口文件：
+[AGENTS.md / CLAUDE.md / README.md 情况]
+
+请输出：
+1. 建议的 comm/README.md 标准地图，字段包括：分组、文档名、解决什么、关键产物
+2. 第一批必须建立的 3-5 份 SPEC
+3. 哪些规范暂时不要建，为什么
+4. SYSTEM_DOCUMENTATION_STANDARD.md 应该管哪些规则
+5. 项目 AGENTS.md / CLAUDE.md / README.md 应该如何引用 comm/
+6. 最小落地步骤
+7. Don't 清单
+8. 后续让执行线程生成每份 SPEC 草稿的 prompt
+```
 
 ## SPEC Impact Analysis Prompt
 
@@ -145,13 +252,17 @@ Keep it constraint-light. A good SPEC removes false constraints and keeps only r
 5. 不应该沉淀的本次特例
 6. 与现有 comm/ 规范是否冲突或重复
 7. AGENTS.md / CLAUDE.md / README.md 是否需要补充引用
-8. 建议的最小变更范围
-9. 下一步用于生成 SPEC diff 的 prompt
+8. comm/README.md 标准地图是否需要更新
+9. 根 README / docs/README / API 权威文档是否受影响
+10. 建议的最小变更范围
+11. 下一步用于生成 SPEC diff 的 prompt
 
 请特别自检：
 - 有没有把单次需求写成通用规范？
 - 有没有把技术偏好或历史实现固化成规范？
 - 有没有先做减法，去掉不必要规则？
+- 有没有造成 README、API 文档或规范之间的重复维护？
+- AGENTS.md / CLAUDE.md / README.md 引用路径是否有效？
 - 输出是否同时方便人照着做，也方便 AI 当上下文使用？
 ```
 

@@ -155,6 +155,94 @@ Coach:
 检查它有没有把单次需求写成通用规范。如果它想把原型里所有东西都写进 comm/，说明过度沉淀了。
 ```
 
+## Build comm Standard Map
+
+User:
+
+```text
+我们要开始建设团队的 comm/ SPEC 体系，第一步怎么做？
+```
+
+Coach:
+
+```text
+当前阶段：SPEC 规范体系维护。
+
+为什么是这个阶段：你不是在推进单次需求，而是在建设团队共享约束和上下文层。第一步不是写很多 SPEC，而是建立 comm/README 标准地图和文档元规范。
+
+下一步动作：让执行线程先生成最小标准地图和第一批规范建议。
+
+可复制 prompt：
+请帮我为团队建立一个最小可用的 comm/ SPEC 规范体系。
+
+注意：
+- SPEC 是团队共享规范文档体系，不是单次需求 PRD。
+- 目标是让人能照着做，让 AI 能作为上下文执行。
+- 先做最小体系，不要一次性设计过多规范。
+
+团队/项目背景：
+[填写]
+
+当前最容易漂移的问题：
+[例如 UI、API、文档、权限、审计、测试、部署]
+
+已有项目入口文件：
+[AGENTS.md / CLAUDE.md / README.md 情况]
+
+请输出：
+1. 建议的 comm/README.md 标准地图，字段包括：分组、文档名、解决什么、关键产物
+2. 第一批必须建立的 3-5 份 SPEC
+3. 哪些规范暂时不要建，为什么
+4. SYSTEM_DOCUMENTATION_STANDARD.md 应该管哪些规则
+5. 项目 AGENTS.md / CLAUDE.md / README.md 应该如何引用 comm/
+6. 最小落地步骤
+7. Don't 清单
+8. 后续让执行线程生成每份 SPEC 草稿的 prompt
+
+拿到产物后：
+检查它有没有先建立标准地图和元规范。如果它直接写十几份完整规范，说明做加法太早。
+```
+
+## Review Project Docs Against comm
+
+User:
+
+```text
+一个项目已经接入 comm/ 规范了，我怎么检查文档体系是否合格？
+```
+
+Coach:
+
+```text
+当前阶段：SPEC 规范体系检查。
+
+为什么是这个阶段：现在要检查项目入口是否正确引用共享规范，以及项目文档是否避免重复、失效和私有漂移。
+
+下一步动作：让执行线程检查根 README、docs/README、AGENTS/CLAUDE 和 API 权威文档。
+
+可复制 prompt：
+请检查这个项目是否正确接入 comm/ SPEC 规范体系。
+
+项目材料：
+1. 根 README.md：[粘贴或让 AI 读取]
+2. docs/README.md：[粘贴或让 AI 读取]
+3. AGENTS.md / CLAUDE.md：[粘贴或让 AI 读取]
+4. API / INTEGRATION / TESTING 等关键文档：[粘贴清单或让 AI 读取]
+5. comm/README.md 标准地图：[粘贴或让 AI 读取]
+
+请输出：
+1. 根 README 是否只承担项目定位、运行、测试、文档入口
+2. docs/README 是否承担角色阅读顺序、职责矩阵、维护规则
+3. AGENTS.md / CLAUDE.md 是否正确引用 comm/ 规范和项目特殊约束
+4. API 字段、错误码、鉴权规则是否只有一个权威文档
+5. 是否存在重复长表、临时说明长期并存、聊天记录保存关键约束
+6. 是否存在失效链接或失效 comm 引用
+7. 最小修复建议
+
+拿到产物后：
+只接受最小修复建议。不要让它借检查机会重写所有文档。
+```
+
 ## Starting a New Requirement
 
 User:
