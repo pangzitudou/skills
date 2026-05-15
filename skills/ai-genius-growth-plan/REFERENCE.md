@@ -21,10 +21,11 @@ An AI-native full-cycle operator can:
 - Clarify requirements.
 - Remove false constraints.
 - Use quick prototypes to make abstract ideas visible.
-- Ask AI for plans and task breakdowns after requirements are clear.
+- Convert validated requirements into a SPEC contract.
+- Ask AI for plans and task breakdowns after SPEC is clear.
 - Let AI implement, test, tune, and prepare delivery.
 - Act as AI's hands, feet, eyes, and business judgment during QA and acceptance.
-- Maintain shared constraints through `comm/` SPEC documents when a reusable standard is needed.
+- Maintain common SPEC rules when a reusable contract or guardrail is needed.
 
 ## Maximum Value
 
@@ -42,7 +43,7 @@ Do not start with:
 - Existing team habit.
 - A premature implementation path.
 - Nice-to-have additions such as analytics, performance tuning, or polish before the core function is clear.
-- A desire to write or update SPEC before knowing whether a reusable constraint is needed.
+- Writing docs before knowing what contract or boundary they must protect.
 
 Before adding anything, remove false constraints. A constraint is real only when it affects the business goal, risk boundary, compliance, data safety, permissions, security, maintenance ability, migration cost, deployment, compatibility, or explicit acceptance.
 
@@ -53,47 +54,67 @@ For new or complex work, use this flow:
 1. Brainstorm: diverge from a raw idea into possible directions.
 2. Grill Me: converge by questioning important decision points.
 3. Prototype when useful: use quick HTML to validate visible flow, information architecture, interaction, and state.
-4. Requirement artifact: record the agreed target, users, flow, constraints, non-goals, and acceptance criteria in the project's normal artifact format.
-5. Plan: ask AI for multiple technical approaches after the requirement is clear and applicable shared specs are loaded.
+4. SPEC: write or review the contract: goal, roles, scope, non-goals, flows, rules, boundaries, and acceptance.
+5. Plan: ask AI for multiple technical approaches after SPEC is clear and applicable common specs are loaded.
 6. Tasks: split the chosen plan into executable tasks.
 7. Implementation: let AI develop, test, tune, and prepare delivery.
 8. Human QA and Acceptance: AI drafts QA; humans verify real behavior and business outcome.
 
-Brainstorm answers "what should we do and where could this go?" Grill Me answers "are decisions clear enough to avoid rework?" Prototype answers "can stakeholders see and judge the flow?" Requirement artifact answers "what exactly are we asking execution threads to satisfy?"
+Brainstorm answers "what should we do and where could this go?" Grill Me answers "are decisions clear enough to avoid rework?" Prototype answers "can stakeholders see and judge the flow?" SPEC answers "what must be true for this work to be correct?"
 
-## SPEC / comm System
+## SPEC as Contract
 
-SPEC is the team's shared Specification Documents System, not a one-off requirement document and not an AI tool feature.
+SPEC is a contract, not a manual.
 
-Typical structure:
+It defines:
+
+- Goal.
+- Roles and scenarios.
+- Scope and non-goals.
+- Business flow.
+- Business rules.
+- Permission, safety, and data boundaries.
+- Acceptance criteria.
+- Things that are not allowed.
+
+It does not define:
+
+- Startup commands.
+- Full API field tables.
+- SQL DDL or complete database schemas.
+- Code-level implementation paths.
+- Test commands or detailed test cases.
+- Deployment steps.
+- Temporary discussion notes.
+
+Use this rule:
+
+> If AI getting it wrong would make the business result wrong, put it in SPEC. If AI only needs to read it to implement, put it in another document and reference it.
+
+For detailed guidance, use [SPEC_GUIDE.md](SPEC_GUIDE.md).
+
+## SPEC Levels
+
+Project or feature SPEC:
+
+```text
+project/docs/SPEC.md
+project/docs/FEATURE_X_SPEC.md
+```
+
+This is business-specific. It defines what a system or feature must accomplish and what counts as correct.
+
+Company or common SPEC:
 
 ```text
 comm/
-  README.md
-  SYSTEM_DOCUMENTATION_STANDARD.md
-  INTERNAL_UI_DESIGN_SPEC.md
-  EXTERNAL_OPEN_API_PLATFORM_STANDARD.md
-  WEB_SERVICE_TECH_STACK_STANDARD.md
-  ...
-
-project/
-  AGENTS.md / CLAUDE.md / README.md
-  docs/
-  ...
+common/
+shared-spec/
 ```
 
-`comm/` stores reusable standards. Project entrypoints reference those standards and add project-specific conventions. This lets humans copy proven rules and lets AI load the right context without private redesign.
+This is reusable across projects. It defines shared rules such as UI, permissions, audit, API shape, documentation, security, or testing guardrails.
 
-SPEC is a cross-cutting constraint layer:
-
-- Before Plan: load applicable specs and distinguish real constraints from false constraints.
-- During prototype review: decide whether a repeated or reusable rule should be proposed for `comm/`.
-- Before Implementation: check that execution threads know which specs apply.
-- After Acceptance: update specs only if the team learned a reusable rule.
-
-Do not put one-off decisions, unvalidated prototype ideas, or personal technology preferences into `comm/`.
-
-For detailed guidance, use [SPEC_GUIDE.md](SPEC_GUIDE.md).
+Do not put one-off decisions, unvalidated prototype ideas, or personal technology preferences into common SPEC.
 
 ## Prompting Principles
 
@@ -102,7 +123,7 @@ For detailed guidance, use [SPEC_GUIDE.md](SPEC_GUIDE.md).
 - Give enough context.
 - Describe the desired effect.
 - Avoid prescribing the implementation path unless it is a real constraint.
-- When shared specs apply, point AI to the relevant `comm/` documents through the project entrypoint instead of pasting everything manually.
+- When common specs apply, point AI to the relevant project entrypoint or shared spec instead of pasting everything manually.
 
 ## HTML Prototyping
 
@@ -113,8 +134,8 @@ After prototype, review:
 - What the prototype validated.
 - What is still uncertain.
 - What should be removed or delayed.
-- What is ready for the requirement artifact.
-- Whether any reusable rule should trigger a SPEC impact analysis.
+- What is ready for SPEC.
+- Whether any reusable rule should trigger a common SPEC impact check.
 
 Use [PROTOTYPING_GUIDE.md](PROTOTYPING_GUIDE.md) for details.
 
@@ -128,7 +149,7 @@ Recommended pattern:
 2. Ensure interfaces and boundaries match.
 3. Ask AI to review the prompts for risk before execution.
 4. Give each agent disjoint files or modules to reduce conflict.
-5. Ensure each agent loads the applicable project entrypoint and shared specs.
+5. Ensure each agent loads the applicable project entrypoint and common specs.
 
 The growth coach should help prepare and review prompts, not execute module work itself.
 
@@ -166,7 +187,7 @@ Use [FIRST_USE.md](FIRST_USE.md) when the user needs a starting point.
 
 A long-lived growth coach thread can be shared across projects because the methodology is common. Specific execution work should happen in separate project threads. Bring outputs back to the coach thread for review.
 
-When work touches a real codebase, the project entrypoint should reference applicable `comm/` specs. The coach may ask the user to bring back the entrypoint or spec impact analysis.
+When work touches a real codebase, the project entrypoint should reference applicable common specs. The coach may ask the user to bring back the entrypoint, SPEC, or common SPEC impact analysis.
 
 ## Methodology Evolution
 

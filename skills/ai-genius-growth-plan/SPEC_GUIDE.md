@@ -1,293 +1,574 @@
-# SPEC / comm Guide
+# SPEC Contract Guide
 
-## What SPEC Means
+## Core Definition
 
-SPEC is the team's shared Specification Documents System.
+SPEC is a contract, not a manual.
 
-It is not:
+It defines the target, roles, scope, business flow, rules, boundaries, and acceptance standard that humans and AI must satisfy. It answers:
 
-- A built-in AI tool skill.
-- A one-off PRD.
-- The core stage of the delivery flow.
-- A place to freeze every prototype decision.
+- What must be true?
+- Who is involved?
+- What is included and excluded?
+- What business rules cannot be violated?
+- What counts as accepted?
 
-It is:
+SPEC does not explain how the current code works, how to run the project, every API field, every database column, every test case, or every deployment command.
 
-- A reusable constraint and context system.
-- Usually stored in a shared `comm/` directory.
-- Referenced by each project through `AGENTS.md`, `CLAUDE.md`, or `README.md`.
-- Written for both humans and AI: humans can follow it directly; AI can load it as context and apply it to new systems.
+Use the strongest boundary:
 
-Core idea:
+> If AI getting it wrong would make the business result wrong, put it in SPEC. If AI only needs to read it to implement, put it in another document and reference it from SPEC.
 
-> This document is for both humans and AI: humans can copy the rule to keep work consistent; AI can use it as context to transform or build new systems.
+## Three Placement Questions
 
-## Typical Structure
+Ask these before putting content in SPEC:
+
+1. Does this define requirement, rule, boundary, or acceptance standard?
+   - Put it in SPEC.
+2. Does this explain current code, folders, startup, local development, or how the project is organized?
+   - Put it in `README.md`, `DEVELOPMENT.md`, or architecture docs.
+3. Does this describe detailed API fields, database tables, deployment commands, or test case details?
+   - Put it in `API.md`, `DATA_MODEL.md`, `DATABASE.md`, `DEPLOYMENT.md`, or `TESTING.md`.
+
+## Two Valid SPEC Levels
+
+### Project or Feature SPEC
+
+Usually lives in:
+
+```text
+project/docs/SPEC.md
+project/docs/FEATURE_X_SPEC.md
+```
+
+It is business-specific. It should define what this system or feature must accomplish and what counts as correct.
+
+### Company or Common SPEC
+
+Usually lives in:
 
 ```text
 comm/
-  README.md                              # standard map and repository purpose
-  SYSTEM_DOCUMENTATION_STANDARD.md       # meta-standard for writing docs
-  INTERNAL_UI_DESIGN_SPEC.md             # UI and interaction standard
-  EXTERNAL_OPEN_API_PLATFORM_STANDARD.md # external API standard
-  WEB_SERVICE_TECH_STACK_STANDARD.md     # technology and engineering standard
-  ...
-
-project/
-  AGENTS.md / CLAUDE.md / README.md      # AI entrypoint: references comm specs and project rules
-  docs/                                  # project docs maintained by AI and humans
-  ...
+common/
+saleforteai-spec/
 ```
 
-The categories above are examples, not law. The important pattern is: shared reusable rules live in `comm/`; project entrypoints reference them and add local context.
+It is reusable across projects. It should define shared rules and guardrails such as UI principles, auth and permission rules, audit rules, API shape, engineering documentation standards, security scanning, or testing standards.
 
-## Standard Map
+Do not turn one feature's temporary choices into a company-level SPEC. First separate reusable rules from project-specific details.
 
-`comm/README.md` should work as the routing table for humans and AI.
+## What Belongs in SPEC
 
-Use this minimum table:
+### Business Goal
 
-| Group | Document | Solves | Key artifacts |
-| --- | --- | --- | --- |
-| Identity and security | `WECOM_LOGIN_AND_PERM_SPEC.md` | Login, user identity alignment, permission model | User tables, permission UI skeleton |
-| Audit and logging | `AUDIT_AND_LOGGING_SPEC.md` | Traceable business audit and API logs | `audit_log`, `write_audit` |
-| External API | `EXTERNAL_OPEN_API_PLATFORM_STANDARD.md` | Unified external API shape, auth, keys, encrypted storage, admin UI | `/open/v1/*`, client docs, Swagger |
-| Integration | `*_INTEGRATION.md` | Third-party identity, API, and message flows | identity maps, API keys, robot ids |
-| UI and experience | `INTERNAL_UI_DESIGN_SPEC.md` | Internal system visual and interaction consistency | `tokens.css`, `app.css`, base layout |
-| Engineering docs | `SYSTEM_DOCUMENTATION_STANDARD.md` | Repository docs, README roles, API/doc ownership | docs structure, responsibility matrix |
-| Performance and operations | `PERFORMANCE_TESTING_AND_OPTIMIZATION_STANDARD.md` | Performance testing, capacity, regression, release checks | test plan, report, optimization log |
-| Security scanning | `SECURITY_SCANNING_AND_REMEDIATION_STANDARD.md` | Pre-release scan, risk grading, remediation and retest | scan plan, report, fix log, blockers |
-| Tech stack and access layer | `WEB_SERVICE_TECH_STACK_STANDARD.md`, `BFF_ACCESS_LAYER_STANDARD.md` | Default stack and client access boundary | `.env.example`, migrations, BFF APIs, DTO validation |
+Put the reason the system or feature exists in SPEC. AI must know why the work matters or it will implement surface behavior.
 
-The coach should treat this as a pattern, not a required taxonomy. Add a group only when it solves repeated drift.
+```md
+## Business Goal
 
-## Documentation Meta-Standard
+This system supports internal invoice application, review, issuing, query, and audit. It reduces manual invoicing work, lowers wrong-invoice risk, and allows approved business systems to submit invoice requests through API.
+```
 
-A mature SPEC system should include `SYSTEM_DOCUMENTATION_STANDARD.md`. It defines how project documentation is written and prevents duplicate, stale, or hidden knowledge.
+### User Roles and Scenarios
 
-Recommended implementation steps:
+Roles decide permissions, pages, flows, and data boundaries.
 
-1. Decide the official docs root. New projects should usually use `docs/`.
-2. Trim root `README.md` to project positioning, local run command, test command, optional directory sketch, and link to the docs center.
-3. Create `docs/README.md` as the docs center with role-based reading order, document responsibility matrix, and maintenance rules.
-4. Register adopted `comm` specs in `README.md`, `AGENTS.md`, or `CLAUDE.md`.
-5. Choose the authoritative API document. API fields, error codes, and auth rules should live in one place.
-6. Create special docs only when needed: permission, audit, masking, performance, security, deployment, master-data integration.
-7. Before release, check dead links, duplicated tables, API sync, and valid project entrypoint references.
+```md
+## Roles
 
-README responsibility split:
+- Employee: submits invoice requests and views their own request records.
+- Finance reviewer: reviews or rejects invoice requests.
+- Admin: maintains invoice subjects, tax categories, and API keys.
+- External business system: submits invoice requests through API.
+```
 
-| File | Readers | Must contain |
+### Functional Scope and Non-Goals
+
+SPEC must say what is included and what is not.
+
+```md
+## Scope
+
+Must include:
+- Invoice request.
+- Finance review.
+- Invoice issuing.
+- Invoice query.
+- Audit trail.
+- API access.
+
+Not included in this phase:
+- Electronic contract management.
+- Automatic tax filing.
+- General ledger.
+- Complex BI analysis.
+```
+
+### Business Flow
+
+Flow belongs in SPEC because it defines business correctness.
+
+```mermaid
+flowchart TD
+    A[Employee submits invoice request] --> B[System validates subject and category]
+    B --> C{Valid}
+    C -- No --> D[Reject with reason]
+    C -- Yes --> E[Finance review]
+    E --> F{Approved}
+    F -- No --> G[Reject]
+    F -- Yes --> H[Call invoice provider]
+    H --> I[Generate invoice]
+    I --> J[Notify requester]
+    J --> K[Write audit log]
+```
+
+### Business Rules
+
+Rules that AI must keep obeying belong in SPEC.
+
+```md
+## Business Rules
+
+- Each company subject can issue invoices only for configured categories.
+- Employees can view only invoice requests they submitted.
+- Invoice requests above 100,000 must receive manual review.
+- Issued invoices cannot be physically deleted; they can only be reversed.
+- Review, rejection, issuing, and reversal must write audit logs.
+```
+
+### Permission Boundaries
+
+Put permission principles in SPEC. If the matrix is complex, reference a separate permission document.
+
+```md
+## Permission Principles
+
+- Normal users can access only their own data.
+- Finance roles can view all invoice requests.
+- Admins can maintain subjects, categories, and API credentials.
+- External systems can access only APIs authorized by their API key.
+
+Detailed matrix: `PERMISSION_MATRIX.md`.
+```
+
+### Data Objects and Data Boundaries
+
+SPEC can name core objects and data boundaries. It should not contain full table definitions.
+
+```md
+## Data Objects
+
+Core objects:
+- Invoice request.
+- Company subject.
+- Invoice.
+- Review record.
+- Audit log.
+
+Detailed fields: `DATA_MODEL.md`.
+```
+
+### API Capability Requirements
+
+SPEC can name required API capabilities. It should not contain the full request and response field table.
+
+```md
+## API Requirements
+
+The system must provide APIs for creating invoice requests, querying requests, cancelling allowed requests, and receiving provider callbacks.
+
+Detailed API contract: `API.md`.
+```
+
+### Non-Functional Requirements
+
+Put requirement-level non-functional rules in SPEC. Put detailed procedures in specialized docs.
+
+Examples:
+
+- All APIs must verify login state or API key.
+- Sensitive fields must not be displayed in plaintext.
+- Key interfaces should respond within 2 seconds under agreed load.
+- Third-party API failures must be logged.
+- Test and production environments must be isolated.
+
+### Acceptance Criteria
+
+Acceptance is one of the main reasons SPEC exists.
+
+```md
+## Acceptance Criteria
+
+- Employees can submit a complete invoice request.
+- Invalid invoice categories are blocked.
+- After finance approval, the system can call the invoice provider.
+- After successful issuing, the requester can view the invoice download link.
+- All key operations have audit logs.
+- API failures produce visible errors and retry handling.
+```
+
+### Don't List
+
+SPEC should say what humans and AI must not do.
+
+Examples:
+
+- Do not bypass existing permission checks.
+- Do not store unnecessary sensitive data.
+- Do not physically delete issued invoices.
+- Do not treat provider callback success as user-visible success before local state is updated.
+
+## What Does Not Belong in SPEC
+
+### Startup Commands
+
+Put commands in `README.md` or `DEVELOPMENT.md`, not SPEC.
+
+```bash
+pnpm install
+pnpm dev
+docker compose up -d
+```
+
+### Full API Field Tables
+
+SPEC may say which API capabilities are required. Detailed paths, fields, error codes, examples, and auth headers belong in `API.md`.
+
+### Database Table Structures
+
+SPEC may list core objects and data boundaries. Full SQL, indexes, constraints, and migrations belong in `DATA_MODEL.md`, `DATABASE.md`, or migration files.
+
+### Code Implementation Plan
+
+SPEC should not say:
+
+```text
+Use XxxController to call YyyService, then call ZzzRepository.
+```
+
+Unless a layering rule is itself a required architecture constraint, implementation belongs in `ARCHITECTURE.md`, `DEVELOPMENT.md`, Plan, or Tasks.
+
+SPEC should say the result-level rule:
+
+```md
+Invoice requests must be processed through the backend service layer. Frontend pages must not call the third-party invoice provider directly.
+```
+
+### Test Commands and Test Case Details
+
+SPEC contains acceptance standards. `TESTING.md` contains test strategy, commands, cases, fixtures, and regression procedures.
+
+### Deployment Commands
+
+Deployment steps, environment variables, rollback, and operations belong in `DEPLOYMENT.md`.
+
+### Temporary Discussion and Detailed Change History
+
+Do not dump meeting notes, discarded ideas, or chat conclusions into SPEC. Use `DECISIONS.md`, `notes/`, or `CHANGELOG.md` when needed.
+
+## Recommended Document Layers
+
+```text
+README.md                         # What this project is, how to run briefly, where docs live
+
+docs/
+  SPEC.md                         # Contract: what to build and what counts as correct
+  ARCHITECTURE.md                 # Architecture: modules, dependencies, technical choices
+  API.md                          # API contract: paths, fields, errors, auth
+  DATA_MODEL.md                   # Data model: entities, fields, relationships
+  TESTING.md                      # Test strategy, commands, cases, fixtures
+  DEPLOYMENT.md                   # Environments, deployment, rollback
+  CHANGELOG.md                    # Change history
+  DECISIONS.md                    # Key decisions and rationale
+
+common/ or comm/
+  INTERNAL_UI_DESIGN_SPEC.md      # Company-level UI rules
+  AUTH_AND_PERMISSION_SPEC.md     # Company-level auth and permission rules
+  AUDIT_AND_LOGGING_SPEC.md       # Company-level audit and logging rules
+  API_STANDARD.md                 # Company-level API rules
+  DOCUMENTATION_STANDARD.md       # Documentation rules and ownership
+```
+
+## Boundary Table
+
+| Content | SPEC | README | ARCHITECTURE | API | DATA_MODEL | TESTING | DEPLOYMENT |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| System goal | Yes | Brief | No | No | No | No | No |
+| User roles | Yes | Brief | No | No | No | Reference | No |
+| Scope and non-goals | Yes | Brief | No | No | No | Reference | No |
+| Business flow | Yes | No | Reference | No | No | Reference | No |
+| Business rules | Yes | No | No | No | No | Reference | No |
+| Permission principles | Yes | No | Reference | Reference | No | Reference | No |
+| Detailed API fields | Summary/reference | No | No | Yes | No | No | No |
+| Database tables | Summary/reference | No | Reference | No | Yes | No | No |
+| Technology choices | Constraint-level only | No | Yes | No | No | No | No |
+| Startup commands | No | Yes | No | No | No | Brief | No |
+| Test commands | No | Brief | No | No | No | Yes | No |
+| Deployment commands | No | Brief | No | No | No | No | Yes |
+| Acceptance criteria | Yes | No | No | No | No | Detailed validation | No |
+| Change history | No | No | No | No | No | No | No |
+
+Change history usually belongs in `CHANGELOG.md`.
+
+## Practical Mnemonic
+
+Put in SPEC:
+
+> Goal, roles, scope, flow, rules, boundaries, acceptance.
+
+Do not put in SPEC:
+
+> Commands, full fields, code paths, logs detail, deployment steps, temporary discussion.
+
+## Project or Feature SPEC Template
+
+```md
+# XXX SPEC
+
+## 1. Background
+
+Why this system or feature is needed. What business problem exists now.
+
+## 2. Goals
+
+- Goal 1
+- Goal 2
+- Goal 3
+
+## 3. Non-Goals
+
+This phase does not include:
+- Non-goal 1
+- Non-goal 2
+
+## 4. User Roles
+
+| Role | Description | Core permissions |
 | --- | --- | --- |
-| Root `README.md` | First-time cloners, CI, people who only glance | One-line positioning, local run command, test command, optional directory sketch, docs center link |
-| `docs/README.md` | Developers, testers, integrators, product readers | Role-based reading order, document responsibility matrix, maintenance rules |
-| `AGENTS.md` / `CLAUDE.md` | AI execution threads | Project overview, adopted `comm` specs, project-specific constraints, verification commands |
+| Normal user | ... | ... |
+| Admin | ... | ... |
 
-Common project docs:
+## 5. Core Scenarios
 
-| Purpose | Suggested names |
-| --- | --- |
-| System overview | `SYSTEM_UNDERSTANDING.md`, `OVERVIEW.md` |
-| Development | `DEVELOPMENT.md`, `DEVELOPMENT_GUIDE.md` |
-| External integration | `INTEGRATION.md`, `INTEGRATION_GUIDE.md` |
-| HTTP/Open API contract | `API.md`, `API_SPEC_FINAL.md` |
-| Testing and acceptance | `TESTING.md`, `FULL_TEST_GUIDE.md` |
-| Deployment and operations | `DEPLOYMENT.md` |
-| Product/design master | `SYSTEM_DESIGN*.md`, prototype HTML, SQL sketches |
-| Permission and security | `PERMISSION_MATRIX.md`, `*_RULES.md`, `SECURITY_HARDENING.md` |
+### Scenario 1: xxx
 
-Minimum docs by system type:
+The user wants xxx, so the system must xxx.
 
-- External API: root README, `docs/README`, integration guide, API contract, development guide, testing guide.
-- Master data or many downstream consumers: the above plus master-data docs, consumer list, alignment notes.
-- Compliance or sensitive data: the above plus security hardening, masking/audit rules, permission matrix.
-- Internal admin only: integration guide can often be omitted; internal APIs should still have one authoritative contract when routes matter.
+### Scenario 2: xxx
 
-## When to Touch SPEC
+...
 
-Use SPEC work when:
+## 6. Business Flow
 
-- A rule should apply across many projects or repeated future tasks.
-- AI keeps drifting because a shared constraint is missing.
-- A prototype exposes reusable UI, workflow, state, permission, QA, API, docs, or deployment rules.
-- A project needs an `AGENTS.md`, `CLAUDE.md`, or `README.md` entrypoint to reference existing `comm/` specs.
-- A completed implementation changes the standard the team should reuse next time.
-- The team needs a routing map that tells AI which standard to load for each domain.
+Describe the main flow in text or mermaid.
 
-Do not touch SPEC when:
+## 7. Functional Specification
 
-- The question is only a single requirement.
-- The prototype has not been reviewed by humans.
-- The decision is a one-off client/project exception.
-- The rule is only a personal technology preference.
-- The current implementation shape is being mistaken for a standard.
-- The user is trying to avoid clarifying the requirement by writing a document.
+### 7.1 Function A
+
+Must support:
+- ...
+- ...
+
+Must not:
+- ...
+- ...
+
+### 7.2 Function B
+
+...
+
+## 8. Business Rules
+
+- Rule 1
+- Rule 2
+- Rule 3
+
+## 9. Permission and Security
+
+- ...
+- ...
+
+Detailed permission matrix: `PERMISSION_MATRIX.md`.
+
+## 10. Data Objects and Boundaries
+
+Core objects:
+- Object A
+- Object B
+- Object C
+
+Detailed fields: `DATA_MODEL.md`.
+
+## 11. API Capability Requirements
+
+The system must provide:
+- Create xxx.
+- Query xxx.
+- Update xxx.
+- Receive xxx callback.
+
+Detailed API contract: `API.md`.
+
+## 12. Non-Functional Requirements
+
+- Security:
+- Performance:
+- Audit:
+- Availability:
+- Maintainability:
+- Observability:
+
+## 13. Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## 14. Not Allowed
+
+- Do not ...
+- Do not ...
+- Do not ...
+
+## 15. Related Documents
+
+- API details: `API.md`
+- Data model: `DATA_MODEL.md`
+- Testing details: `TESTING.md`
+- Deployment details: `DEPLOYMENT.md`
+```
+
+## Company or Common SPEC Shape
+
+A common SPEC should standardize repeated rules, not one project's business detail.
+
+Use this shape:
+
+1. Purpose: what drift or repeated mistake this prevents.
+2. Scope: which systems or scenarios must follow it.
+3. Non-scope: where it must not be applied.
+4. Rules: concrete reusable rules.
+5. Boundaries: what this standard does not own.
+6. References: which detailed docs own fields, commands, examples, or procedures.
+7. Acceptance/checklist: how humans and AI verify compliance.
+8. Not allowed: common mistakes.
+
+Avoid adding company-level SPECs for unaccepted prototype details, one-off client exceptions, or personal technology preferences.
 
 ## Coach Behavior
 
-When users ask for "SPEC", first clarify what they mean:
+When a user asks for SPEC:
 
-- Requirement artifact: a PRD, issue, brief, acceptance note, or project-native requirement document.
-- SPEC system update: a reusable `comm/` standard or project entrypoint reference.
+1. Identify whether they need a project/feature SPEC or a company/common SPEC.
+2. Keep SPEC at the contract level.
+3. Move implementation, fields, commands, test cases, and deployment details to the right document.
+4. If the feature involves UI, workflow, operations, or states, check whether a quick HTML prototype has validated the flow.
+5. Before Plan, verify the SPEC has goals, roles, scope, non-goals, rules, boundaries, and acceptance.
 
-If they mean a SPEC system update, do not write a full document immediately. Guide this order:
+Do not write a complete SPEC by default unless the user explicitly asks for a draft. Prefer prompts and review checklists.
 
-1. Identify the affected domain: UI, workflow, API, permission, testing, docs, deployment, data, security, or other.
-2. Inspect or ask for the existing `comm/` standard map.
-3. Decide whether to update an existing standard, add a new standard, or only update a project entrypoint.
-4. Separate reusable rules from one-off project details.
-5. Propose the minimal diff.
-6. Review for duplication, false constraints, and usability by both humans and AI.
-
-## SPEC Document Shape
-
-A useful `comm/` SPEC should usually include:
-
-1. Title and purpose: what inconsistency or drift this standard prevents.
-2. Audience: how humans use it and how AI uses it.
-3. Scope: where it applies.
-4. Non-scope: where it must not be applied.
-5. Source of truth: related files, APIs, modules, examples, or owner documents.
-6. Relationship to other specs: which standards should be loaded before or after it.
-7. Developer implementation steps: the shortest path humans and AI should follow.
-8. Key artifacts: files, tables, tokens, APIs, templates, reports, prompts, or screenshots controlled by the spec.
-9. Rules: concrete reusable rules, not vague principles.
-10. Examples: small examples that show the expected pattern.
-11. Don't list: things humans and AI must not do.
-12. Review checklist: how to judge whether an output follows the spec.
-13. AI upgrade prompt: a copyable prompt for execution threads to apply the spec to a project.
-14. Version and change log: what changed and why.
-
-Keep it constraint-light. A good SPEC removes false constraints and keeps only rules that protect consistency, safety, maintainability, or business acceptance.
-
-## Good SPEC Qualities
-
-- Reusable: it applies beyond one request.
-- Requirement-rooted: it explains what problem the standard prevents.
-- Constraint-light: it avoids freezing personal preference or historical accident.
-- Operational: humans know what to do, and AI knows what context to load.
-- Reviewable: it contains concrete checks.
-- Anti-drift: it points to source artifacts and project entrypoints.
-- Maintained: it has an update rule and change log.
-
-## Bad SPEC Smells
-
-- It is really a PRD wearing a SPEC title.
-- It starts from a favored technology instead of a requirement.
-- It preserves current implementation shape without justification.
-- It turns a prototype's temporary UI into a permanent standard too early.
-- It adds many rules before removing false constraints.
-- It has principles but no checks.
-- It has no key artifacts, so AI cannot tell what to modify or verify.
-- It lacks an AI upgrade prompt, so every execution thread reinvents how to apply it.
-- It is readable by humans but gives AI no routing, files, artifacts, or prompt.
-- It is useful to AI but unreadable or unreviewable by humans.
-
-## Hard Don'ts for SPEC Systems
-
-- Do not duplicate the same long table in root `README.md` and `docs/README.md`.
-- Do not maintain the same API field table in multiple documents.
-- Do not change an interface without updating the authoritative API document.
-- Do not keep long-lived "temporary notes" beside official docs.
-- Do not leave key development constraints only in chat history.
-- Do not let `AGENTS.md`, `CLAUDE.md`, or `README.md` reference missing `comm` paths.
-- Do not create a new SPEC when an existing standard can be extended cleanly.
-- Do not add performance, security scanning, or operational gates before the core function is accepted unless they are real constraints.
-
-## Build a SPEC System Prompt
+## Draft Project SPEC Prompt
 
 ```text
-请帮我为团队建立一个最小可用的 comm/ SPEC 规范体系。
+请为下面工作生成一份 SPEC 草稿。
 
 注意：
-- SPEC 是团队共享规范文档体系，不是单次需求 PRD。
-- 目标是让人能照着做，让 AI 能作为上下文执行。
-- 先做最小体系，不要一次性设计过多规范。
-
-团队/项目背景：
-[填写]
-
-当前最容易漂移的问题：
-[例如 UI、API、文档、权限、审计、测试、部署]
-
-已有项目入口文件：
-[AGENTS.md / CLAUDE.md / README.md 情况]
-
-请输出：
-1. 建议的 comm/README.md 标准地图，字段包括：分组、文档名、解决什么、关键产物
-2. 第一批必须建立的 3-5 份 SPEC
-3. 哪些规范暂时不要建，为什么
-4. SYSTEM_DOCUMENTATION_STANDARD.md 应该管哪些规则
-5. 项目 AGENTS.md / CLAUDE.md / README.md 应该如何引用 comm/
-6. 最小落地步骤
-7. Don't 清单
-8. 后续让执行线程生成每份 SPEC 草稿的 prompt
-```
-
-## SPEC Impact Analysis Prompt
-
-```text
-请基于下面材料做一次 SPEC 规范体系影响分析。
-
-注意：
-- SPEC 不是单次需求 PRD。
-- SPEC 是团队共享的规范文档体系，通常位于 comm/ 目录。
-- 项目通过 AGENTS.md / CLAUDE.md / README.md 引用 comm/ 中的规范。
-- 先不要直接写完整规范文档，不要写技术方案，不要拆任务。
-- 目标是判断哪些内容值得沉淀为通用规范，哪些只是本次特例。
+SPEC 是合同，不是 README、技术方案、API 文档、数据库文档、测试文档或部署文档。
+请只定义目标、角色、范围、流程、规则、边界和验收。
 
 输入材料：
-1. prototype / PRD / 实现结果：[粘贴链接、截图、HTML、说明或摘要]
-2. 当前项目背景：[项目名称、业务场景、目标用户]
-3. 现有 comm/ 规范目录：[粘贴清单，或让 AI 读取]
-4. 当前项目 AGENTS.md / CLAUDE.md / README.md：[粘贴或让 AI 读取]
-5. 已确认的结论：[填写]
-6. 未确认的问题：[填写]
+1. 业务背景：[填写]
+2. prototype 或流程材料：[填写，没有则写无]
+3. 目标用户/角色：[填写]
+4. 当前想达成的业务目标：[填写]
+5. 已确认必须做的范围：[填写]
+6. 已确认不做的范围：[填写]
+7. 权限/安全/数据边界：[填写]
+8. 相关公司级/公共 SPEC：[填写，没有则写无]
+9. 已有 API / DATA_MODEL / TESTING / DEPLOYMENT 文档：[填写，没有则写待补]
 
 请输出：
-1. 涉及的规范领域：UI / 流程 / 接口 / 权限 / 测试 / 文档 / 部署 / 数据 / 安全 / 其他
-2. 应该更新哪些已有 SPEC
-3. 是否需要新增 SPEC，为什么
-4. 可沉淀为通用规范的规则
-5. 不应该沉淀的本次特例
-6. 与现有 comm/ 规范是否冲突或重复
-7. AGENTS.md / CLAUDE.md / README.md 是否需要补充引用
-8. comm/README.md 标准地图是否需要更新
-9. 根 README / docs/README / API 权威文档是否受影响
-10. 建议的最小变更范围
-11. 下一步用于生成 SPEC diff 的 prompt
+1. 背景
+2. 目标
+3. 非目标
+4. 用户角色
+5. 核心场景
+6. 业务流程
+7. 功能规格
+8. 业务规则
+9. 权限与安全
+10. 数据对象与数据边界摘要
+11. API 能力要求摘要
+12. 非功能要求
+13. 验收标准
+14. 不允许做的事
+15. 需要另行维护的文档引用
 
-请特别自检：
-- 有没有把单次需求写成通用规范？
-- 有没有把技术偏好或历史实现固化成规范？
-- 有没有先做减法，去掉不必要规则？
-- 有没有造成 README、API 文档或规范之间的重复维护？
-- AGENTS.md / CLAUDE.md / README.md 引用路径是否有效？
-- 输出是否同时方便人照着做，也方便 AI 当上下文使用？
+不要写：
+- 启动命令
+- 完整 API 字段表
+- 数据库建表 SQL
+- 具体代码实现路径
+- 测试命令和测试用例细节
+- 部署命令
+- 一次性讨论记录
+
+特别提醒：
+以需求为中心，不要被技术偏好或历史实现绑架。
+做加法前先做减法。
+如果内容需要展开，请只标记应进入 API.md / DATA_MODEL.md / TESTING.md / DEPLOYMENT.md / README.md / ARCHITECTURE.md，不要在 SPEC 里展开。
 ```
 
-## Minimal SPEC Diff Prompt
+## Review SPEC Prompt
 
 ```text
-请基于下面的 SPEC 影响分析，生成最小规范变更建议。
+请审查下面 SPEC 是否合格。
+
+判断标准：
+SPEC 是合同，不是说明书。它应该只定义目标、角色、范围、流程、规则、边界和验收。
+
+请检查：
+1. 是否有清楚的业务目标。
+2. 是否有用户角色和核心场景。
+3. 是否有做什么和不做什么。
+4. 是否有业务流程和业务规则。
+5. 是否有权限、安全、数据边界。
+6. 是否有可验证的验收标准。
+7. 是否把启动命令、完整 API 字段、数据库表结构、代码实现、测试命令、部署命令或临时讨论错误放进 SPEC。
+8. 哪些内容应该移到 README / ARCHITECTURE / API / DATA_MODEL / TESTING / DEPLOYMENT / CHANGELOG / DECISIONS。
+9. 是否可以进入 Plan；如果不能，缺什么。
+
+SPEC 内容：
+[粘贴]
+```
+
+## Common SPEC Impact Prompt
+
+```text
+请判断下面内容是否值得沉淀为公司级/公共 SPEC。
 
 注意：
-- 只输出需要更新的文档、章节和建议 diff。
-- 不要重写整个 comm/。
-- 不要加入未验证的规则。
-- 不要把本次需求特例沉淀成通用规范。
+公司级/公共 SPEC 只沉淀可复用规则，不沉淀单次需求细节。
+不要写完整规范，不要写技术方案，不要拆任务。
 
-SPEC 影响分析：
-[粘贴]
-
-现有相关规范：
-[粘贴或让 AI 读取]
+输入材料：
+1. 当前项目或功能 SPEC：[粘贴]
+2. prototype / 实现结果 / QA 发现：[填写]
+3. 已有公共 SPEC 清单：[填写]
+4. 已确认的业务结论：[填写]
 
 请输出：
-1. 需要修改的文件
-2. 每个文件的修改目的
-3. 建议新增/修改/删除的条目
-4. 与其他规范的关系
-5. AGENTS.md / CLAUDE.md / README.md 是否需要更新
-6. Review checklist
+1. 可复用规则有哪些。
+2. 本次特例有哪些，不能进入公共 SPEC。
+3. 应该更新哪个已有 SPEC，还是新增 SPEC。
+4. 最小变更范围。
+5. 哪些详细内容应留在项目 SPEC、API、DATA_MODEL、TESTING 或 README。
+6. 项目 AGENTS.md / CLAUDE.md / README.md 是否需要补引用。
+7. 审查清单。
+
+特别自检：
+- 有没有把单次业务需求写成公司级规范？
+- 有没有把技术偏好或历史实现固化成规范？
+- 有没有先做减法？
+- 有没有造成 SPEC、README、API、TESTING 等文档重复维护？
 ```

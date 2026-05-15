@@ -29,5 +29,5 @@ Instead, turn the question into a methodology gap that can improve the system.
 - Missing checklist: the methodology has a principle but no review method.
 - Missing role example: the situation is non-development and lacks a role-specific example.
 - Missing risk boundary: the methodology does not say where human approval is required.
-- Missing SPEC system pattern: the user needs a `comm/` standard or project entrypoint pattern not yet described.
+- Missing SPEC pattern: the user needs a project/feature SPEC pattern, common SPEC pattern, or project entrypoint pattern not yet described.
 - Missing anti-pattern: a repeated bad habit is visible but not yet named.

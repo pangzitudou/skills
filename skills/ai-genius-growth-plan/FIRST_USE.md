@@ -11,7 +11,7 @@ Lower the first-use barrier without turning the coach into an executor.
 Ask one question at a time. Start with:
 
 ```text
-你现在想推进的是哪类工作：新需求、重构、AI 产物验收、流程优化、岗位工作 AI 化、SPEC 规范体系维护，还是团队转型？
+你现在想推进的是哪类工作：新需求、重构、AI 产物验收、流程优化、岗位工作 AI 化、SPEC 编写/审查、公共规范维护，还是团队转型？
 ```
 
 Then ask:
@@ -23,7 +23,7 @@ Then ask:
 If the user says "SPEC", ask:
 
 ```text
-你说的 SPEC 是单次需求产物，还是 comm/ 里的团队共享规范？如果是共享规范，是想更新已有规范、增加新规范，还是让项目入口引用规范？
+你说的 SPEC 是项目/功能级合同，还是公司级/公共规范？如果是项目/功能级，请说明业务目标和范围；如果是公共规范，请说明它要防止哪类重复漂移。
 ```
 
 Then respond with:
@@ -42,12 +42,13 @@ These are not role boundaries. They are common starting points for people growin
 
 Common starts:
 
-- New requirement: Brainstorm, then Grill Me, then prototype when useful, then requirement artifact.
+- New requirement: Brainstorm, then Grill Me, then prototype when useful, then SPEC.
 - Refactor: false constraint check, then ideal design vs migration plan.
 - AI implementation result: tests, smoke E2E, self-review, human acceptance.
 - AI says it is done: ask AI for a human QA checklist, then execute as AI's hands and eyes.
 - UI or workflow uncertainty: generate a quick HTML prototype before Plan.
-- SPEC/comm update: run impact analysis first; do not write a full standard immediately.
+- Project/feature SPEC: write only goal, roles, scope, flow, rules, boundaries, and acceptance.
+- Company/common SPEC update: run impact analysis first; do not write a full shared standard immediately.
 
 ### Operations
 
@@ -80,7 +81,7 @@ Common starts:
 - Team AI adoption: start with pilot scope, success signals, and resistance points.
 - Role redesign: define which decisions remain human and which operations can move to AI.
 - Productivity review: inspect behavior change before measuring output volume.
-- SPEC system setup: start with standard map, project entrypoint pattern, and one pilot project.
+- Common SPEC system setup: start with standard map, project entrypoint pattern, and one pilot project.
 
 ## First-Use Response Template
 

@@ -54,29 +54,33 @@ Smell:
 
 Coach response:
 
-- Send the user back to Brainstorm, Grill Me, Prototype, or requirement artifact review.
+- Send the user back to Brainstorm, Grill Me, Prototype, or SPEC review.
 - Provide a prompt for clarifying the requirement.
 - Explain that early implementation amplifies rework.
 
-## SPEC-as-PRD Confusion
+## SPEC-as-Manual Confusion
 
 Smell:
 
-- The user says "write SPEC" when they really need a requirement artifact.
-- The user wants to put one prototype's decisions directly into `comm/`.
-- The user treats SPEC as the center of the method instead of a shared constraint system.
+- The user says "write SPEC" and AI starts writing README, API fields, database schema, test cases, or implementation paths.
+- The user treats SPEC as a technical方案 or说明书 instead of a contract.
+- The user wants to put startup commands, SQL, controller/service paths, deployment steps, or meeting notes into SPEC.
+- The user wants to put one prototype's business details directly into a company-level common SPEC.
 
 Coach response:
 
-- Clarify whether they mean a requirement artifact or a `comm/` specification update.
-- If it is a requirement artifact, review target, users, flow, constraints, non-goals, and acceptance.
-- If it is a SPEC update, run impact analysis first and propose the smallest reusable rule change.
+- Restate that SPEC is a contract: goal, roles, scope, flow, rules, boundaries, and acceptance.
+- Move startup commands to README or DEVELOPMENT.
+- Move API fields to API docs.
+- Move database schema to DATA_MODEL or DATABASE.
+- Move test details to TESTING and deployment steps to DEPLOYMENT.
+- If it is a company-level common SPEC, separate reusable rules from project-specific details before writing anything.
 
 ## Over-Standardizing
 
 Smell:
 
-- Every small request creates a new SPEC.
+- Every small request creates a new company-level common SPEC.
 - One-off client exceptions become global rules.
 - Unvalidated prototype details become standards.
 
@@ -84,7 +88,8 @@ Coach response:
 
 - Ask what repeated drift or inconsistency the standard prevents.
 - Separate reusable rules from temporary choices.
-- Prefer updating an existing standard or project entrypoint over creating a new standard.
+- Prefer a project/feature SPEC for one business feature.
+- Prefer updating an existing common standard over creating a new one.
 
 ## Trust by Vibe
 
@@ -177,7 +182,7 @@ Smell:
 Coach response:
 
 - Remind the user that the target is AI-native full-cycle ability.
-- Use AI to create the missing artifact: HTML prototype, QA checklist, requirement artifact, Plan, or acceptance checklist.
+- Use AI to create the missing artifact: HTML prototype, QA checklist, SPEC, Plan, or acceptance checklist.
 - Keep human business judgment, but do not hide behind old role boundaries.
 
 ## Text-Only Requirement Drift

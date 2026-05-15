@@ -12,7 +12,7 @@ Use this before Plan, refactoring, or SPEC updates.
 - Is it required by explicit business acceptance?
 - Is it only personal preference, dislike, historical habit, current code shape, or a prototype accident?
 
-If it is not a real constraint, remove it before asking AI for a plan or writing it into `comm/`.
+If it is not a real constraint, remove it before asking AI for a plan or writing it into SPEC.
 
 ## Brainstorm to Grill Me
 
@@ -29,7 +29,7 @@ Go back to Brainstorm when:
 - The user has locked a technology path without real constraints.
 - The problem is still described as a feature instead of a business goal.
 
-## Grill Me to Prototype or Requirement Artifact
+## Grill Me to Prototype or SPEC
 
 Ready to move forward when:
 
@@ -38,7 +38,7 @@ Ready to move forward when:
 - The user can explain the target outcome in one sentence.
 - Known risks have owners or review points.
 - Acceptance criteria can be observed.
-- Visible flows have enough clarity to prototype, or invisible logic has enough clarity to document.
+- Visible flows have enough clarity to prototype, or invisible logic has enough clarity to write SPEC.
 
 Go back to Grill Me when:
 
@@ -66,25 +66,59 @@ Go back when:
 - It is treated as production code.
 - It expands scope before validating the core path.
 
-## Prototype to SPEC Impact Check
+## Prototype to SPEC Check
 
-Do a SPEC impact analysis only when:
+Ready to draft or update a project/feature SPEC when:
 
-- The prototype reveals a reusable rule for many future pages, flows, states, permissions, tests, docs, APIs, or deployments.
-- The same pattern already appears in multiple projects.
-- The absence of a standard would cause AI drift or team inconsistency.
-- A project entrypoint needs to reference an existing `comm/` standard.
+- The core user path has been reviewed by a human.
+- The accepted states and unresolved states are separated.
+- The goal, users, scope, non-goals, business rules, and acceptance can be written as a contract.
+- UI decisions are tied to business flow or acceptance, not personal visual taste.
+- Non-core additions have been removed or deferred.
 
-Do not update SPEC when:
+Do not draft SPEC from prototype when:
 
-- The rule is a one-off project choice.
-- The flow has not been accepted by humans.
-- The rule is only visual polish.
-- The rule comes from current implementation habit rather than requirement.
+- Stakeholders have not reviewed the prototype.
+- The prototype is mostly visual polish.
+- The flow is still ambiguous.
+- The user is trying to avoid clarifying rules by writing a document.
 
-## Requirement Artifact to Plan
+Run a common SPEC impact check only when the prototype reveals a reusable rule across projects.
 
-Ready to enter Plan when the requirement artifact includes:
+## SPEC Contract Check
+
+A good project or feature SPEC should include:
+
+- Business goal.
+- User roles and core scenarios.
+- Functional scope.
+- Explicit non-goals.
+- Business flow.
+- Business rules.
+- Permission, security, and data boundaries.
+- API capability summary when APIs matter.
+- Data object summary when data matters.
+- Non-functional requirements at requirement level.
+- Acceptance criteria.
+- Don't list.
+- References to detailed documents for API, data model, testing, deployment, architecture, or README details.
+
+Go back when:
+
+- The SPEC starts with implementation or technology choices.
+- It contains startup commands.
+- It contains full API request and response field tables.
+- It contains database table DDL or full schema details.
+- It contains controller/service/repository implementation paths.
+- It contains test command or detailed test-case procedures.
+- It contains deployment commands.
+- It stores temporary discussion notes or discarded ideas.
+- It lacks acceptance criteria.
+- It does not say what is out of scope.
+
+## SPEC to Plan
+
+Ready to enter Plan when the SPEC includes:
 
 - Clear business goal.
 - Target users or scenarios.
@@ -92,7 +126,8 @@ Ready to enter Plan when the requirement artifact includes:
 - Explicit non-goals.
 - Boundaries, risks, permissions, and data concerns.
 - Prototype review result when visible flows are involved.
-- Applicable `comm/` specs or a clear statement that no shared spec update is needed.
+- Applicable common specs or a clear statement that none apply.
+- References to the right detailed docs instead of duplicating them.
 - Enough context for AI to compare approaches.
 
 Do not enter Plan when:
@@ -101,77 +136,59 @@ Do not enter Plan when:
 - Acceptance is subjective.
 - Existing implementation is treated as the only possible design without justification.
 - Non-core additions are mixed into the core function too early.
-- Applicable shared specs have not been loaded or referenced.
+- Applicable common specs have not been loaded or referenced.
+- API, data, test, or deployment details are pretending to be SPEC.
 
-## SPEC System Change Check
+## Common SPEC Impact Check
 
-A good SPEC change should:
+Use this only for company-level or shared standards.
 
-- Serve both humans and AI.
-- State what inconsistency, drift, or repeated problem it prevents.
+A common SPEC change should:
+
 - Apply beyond one request.
-- Fit into the `comm/README.md` standard map: group, document, solves, key artifacts.
-- Name source artifacts, files, APIs, reports, templates, prompts, or examples.
-- Include implementation steps, concrete rules, examples, review checklist, Don't list, and AI upgrade prompt.
+- Prevent repeated drift, inconsistency, risk, or review failure.
+- Preserve a clear boundary with project SPEC, README, API, data model, testing, and deployment docs.
+- Fit into the shared standard map if one exists.
 - Keep real constraints and remove false constraints.
 - Update project entrypoints only when needed.
 - Preserve a single source of truth for API fields, error codes, auth rules, and long tables.
 
 Go back when:
 
-- The SPEC is actually a PRD.
-- The SPEC is only implementation details.
-- It lacks review rules.
-- It lacks key artifacts or an AI upgrade prompt.
-- It freezes prototype details before business acceptance.
-- It would let AI redesign privately without checking shared artifacts.
-- It duplicates an existing `comm/` standard.
-- It creates duplicated README/API tables or invalid entrypoint references.
+- The proposed common SPEC is actually one project's feature SPEC.
+- It freezes unaccepted prototype details.
+- It standardizes personal preference or current implementation shape.
+- It duplicates another shared standard.
+- It creates duplicated README/API/TESTING content.
+- It adds new standards before extending an existing one.
 
-## comm Documentation System Check
+## Documentation Boundary Check
 
-A healthy `comm/` documentation system should have:
+Use this when SPEC starts absorbing other docs.
 
-- `comm/README.md` with a standard map: group, document, solves, key artifacts.
-- `SYSTEM_DOCUMENTATION_STANDARD.md` as the meta-standard for writing and maintaining project docs.
-- Clear responsibility split between root `README.md`, `docs/README.md`, and `AGENTS.md` / `CLAUDE.md`.
-- One authoritative API document for fields, error codes, and auth.
-- Project entrypoints that reference adopted `comm` specs with valid paths.
-- A Don't list that prevents duplicate tables, hidden chat-only constraints, and long-lived temporary notes.
+- SPEC: goal, roles, scope, flow, rules, boundaries, acceptance.
+- README: project identity, brief setup, brief test command, docs entry.
+- ARCHITECTURE: modules, dependencies, technical choices, implementation rationale.
+- API: paths, fields, auth headers, error codes, examples.
+- DATA_MODEL or DATABASE: entities, fields, relationships, SQL, migrations.
+- TESTING: strategy, commands, cases, fixtures, regression.
+- DEPLOYMENT: env vars, deployment, rollback, operations.
+- CHANGELOG: change history.
+- DECISIONS: key decisions and rationale.
 
 Go back when:
 
-- The standard map cannot tell AI which spec to load.
-- Root `README.md` and `docs/README.md` duplicate the same long content.
-- API contracts are scattered across multiple docs.
-- Key constraints exist only in chat history.
-- Project entrypoints reference stale or missing paths.
-- The team is adding new standards before extending existing ones.
-
-## Minimum Docs by System Type
-
-External API systems should usually have:
-
-- Root README, `docs/README`, integration guide, API contract, development guide, testing guide.
-
-Master data or multi-consumer systems should add:
-
-- Master-data docs, consumer list, alignment notes.
-
-Compliance or sensitive-data systems should add:
-
-- Security hardening, masking or audit rules, permission matrix.
-
-Internal admin systems can often omit:
-
-- External integration guide, unless internal routes still need an authoritative API contract.
+- A table is maintained in two places.
+- API fields appear in SPEC and API docs at the same level of detail.
+- Test cases are mixed into acceptance criteria.
+- Commands or implementation paths appear in SPEC.
 
 ## Plan to Tasks
 
 Ready to move forward when:
 
 - Multiple approaches were compared.
-- The chosen approach is tied to the requirement.
+- The chosen approach is tied to the SPEC.
 - Interfaces and boundaries are clear.
 - Risks and rollback or migration concerns are named.
 - Applicable specs and project entrypoints are named.
@@ -181,8 +198,8 @@ Go back to Plan when:
 
 - The plan is a single unchallenged path.
 - It follows the old structure by default.
-- It does not explain why the approach satisfies the requirement.
-- It ignores shared specs or real constraints.
+- It does not explain why the approach satisfies the SPEC.
+- It ignores common specs or real constraints.
 
 ## Implementation Acceptance
 
@@ -200,7 +217,7 @@ Humans should cover:
 - Evidence capture: screenshots, logs, URLs, timestamps, and exact data.
 - Whether the output achieves the business goal.
 - Whether the user experience or operational process is acceptable.
-- Whether risk boundaries and shared specs were respected.
+- Whether risk boundaries and applicable specs were respected.
 - Whether the result should be shipped, revised, or rejected.
 
 Remember: unit tests passing does not prove the product works. Product acceptance is the human role.
