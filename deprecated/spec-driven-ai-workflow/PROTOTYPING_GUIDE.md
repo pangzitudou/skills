@@ -2,7 +2,7 @@
 
 ## Principle
 
-Quick HTML prototypes are AI-native requirement validation, not frontend implementation.
+Quick HTML prototypes are AI-assisted requirement validation, not frontend implementation.
 
 Use them to make abstract requirements visible before the team locks into Plan, Tasks, or implementation. The goal is not to become a UI specialist. The goal is to create a visible artifact that helps humans and AI judge flow, information architecture, states, and business acceptance.
 

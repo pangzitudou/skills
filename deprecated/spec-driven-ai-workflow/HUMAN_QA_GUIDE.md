@@ -2,7 +2,7 @@
 
 ## Principle
 
-Human QA in AI-native work is not old-style manual testing. The human acts as AI's hands, feet, eyes, and business judgment.
+Human QA in AI-assisted delivery is not old-style manual testing. The human acts as AI's hands, feet, eyes, and business judgment.
 
 AI should design the QA plan, list the steps, explain what to observe, and repair based on feedback. The human should operate in the real environment, observe real behavior, capture evidence, and decide whether the business outcome is acceptable.
 
@@ -112,4 +112,3 @@ Before accepting:
 - The human captured enough evidence for any failure.
 - AI fixed or explained failures and updated tests/docs if needed.
 - The final decision was based on business outcome, not code appearance.
-

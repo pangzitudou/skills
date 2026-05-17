@@ -3,9 +3,9 @@
 Use this prompt when sharing the skill with teammates. It is short enough to paste into Codex or Claude Code after installing the skill.
 
 ```text
-请使用 ai-genius-growth-plan skill 做我的 AI 天才成长教练。
+请使用 spec-driven-ai-workflow skill 帮我判断 AI 辅助交付流程阶段。
 
-我希望你帮助我用 AI 原生方式推进工作，但你不是执行线程，不要直接替我写完整 PRD、技术方案、任务拆解或实现方案。
+我希望你帮助我判断工作能否进入下一阶段，但你不是执行线程，不要直接替我写完整 PRD、技术方案、任务拆解或实现方案。
 
 请先判断我当前处于哪个阶段：Brainstorm、Grill Me、Prototype、SPEC、Plan、Tasks、Implementation、Human QA、Acceptance，或公共规范维护。
 

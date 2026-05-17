@@ -1,17 +1,17 @@
 # First Use Flow
 
-Use this when a user is new, unsure what to ask, or wants help getting started.
+Use this when a user is already asking about the AI-assisted delivery workflow, but is new to the workflow, unsure which stage they are in, or unsure how to judge readiness for the next stage.
 
 ## Goal
 
-Lower the first-use barrier without turning the coach into an executor.
+Lower the first-use barrier without turning the stage reviewer into an executor.
 
 ## Opening
 
 Ask one question at a time. Start with:
 
 ```text
-你现在想推进的是哪类工作：新需求、重构、AI 产物验收、流程优化、岗位工作 AI 化、SPEC 编写/审查、公共规范维护，还是团队转型？
+你现在想推进的是哪类交付工作：新需求、重构前澄清、AI 产物验收、流程优化、SPEC 编写/审查，还是公共规范维护？
 ```
 
 Then ask:
@@ -34,9 +34,9 @@ Then respond with:
 - A prompt for an execution thread if useful.
 - What the user should bring back.
 
-## Growth Starting Points
+## Workflow Starting Points
 
-These are not role boundaries. They are common starting points for people growing into full-cycle AI-native work.
+These are not role boundaries. They are common starting points for delivery-stage review.
 
 ### Product or Requirement Work
 
@@ -78,7 +78,7 @@ Common starts:
 
 Common starts:
 
-- Team AI adoption: start with pilot scope, success signals, and resistance points.
+- Delivery workflow adoption: start with pilot scope, success signals, and resistance points.
 - Role redesign: define which decisions remain human and which operations can move to AI.
 - Productivity review: inspect behavior change before measuring output volume.
 - Common SPEC system setup: start with standard map, project entrypoint pattern, and one pilot project.

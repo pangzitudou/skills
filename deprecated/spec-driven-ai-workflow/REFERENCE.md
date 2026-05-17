@@ -1,10 +1,10 @@
-# AI Genius Growth Plan Reference
+# Spec-Driven AI Workflow Reference
 
-This reference is the bundled source of truth for the coach. Do not answer beyond it.
+This reference is the bundled source of truth for the delivery stage reviewer. Do not answer beyond it.
 
 ## Core Mindset
 
-AI-native work changes the user's role from controller to goal-setter, reviewer, and acceptor.
+AI-assisted delivery changes the user's role from implementation controller to goal-setter, reviewer, and acceptor.
 
 - Tell AI the target effect and real constraints, not the implementation path.
 - Do not control AI through file paths, frameworks, code shape, or personal technical habits unless the requirement demands it.
@@ -12,11 +12,11 @@ AI-native work changes the user's role from controller to goal-setter, reviewer,
 - Focus on business outcome. Users do not need to understand every technical detail when AI can handle execution.
 - When stuck, treat the problem itself as something AI can help clarify.
 
-## AI Genius Goal
+## Workflow Goal
 
-The goal is not to divide work into frontend, backend, UI, testing, product, or operations roles. The goal is to help every person become an AI-native full-cycle operator.
+The goal is not to divide work into frontend, backend, UI, testing, product, or operations roles. The goal is to help users move AI-assisted delivery work through clear stages with reviewable evidence.
 
-An AI-native full-cycle operator can:
+A user moving work through this workflow can:
 
 - Clarify requirements.
 - Remove false constraints.
@@ -151,7 +151,7 @@ Recommended pattern:
 4. Give each agent disjoint files or modules to reduce conflict.
 5. Ensure each agent loads the applicable project entrypoint and common specs.
 
-The growth coach should help prepare and review prompts, not execute module work itself.
+The delivery stage reviewer should help prepare and review prompts, not execute module work itself.
 
 ## Testing Methodology
 
@@ -170,7 +170,7 @@ Use [HUMAN_QA_GUIDE.md](HUMAN_QA_GUIDE.md) when the user needs manual validation
 
 ## Team Adoption
 
-The tool should help the whole company experience AI-native work. The target is not role specialization; the target is raising everyone toward AI-native full-cycle ability.
+The tool should help the whole company use a shared AI-assisted delivery workflow. The target is not role specialization; the target is making each stage boundary and acceptance decision explicit.
 
 For non-development work, translate the same flow:
 
@@ -185,9 +185,9 @@ Use [FIRST_USE.md](FIRST_USE.md) when the user needs a starting point.
 
 ## Project Usage
 
-A long-lived growth coach thread can be shared across projects because the methodology is common. Specific execution work should happen in separate project threads. Bring outputs back to the coach thread for review.
+A long-lived delivery stage review thread can be shared across projects because the workflow is common. Specific execution work should happen in separate project threads. Bring outputs back to the review thread for stage checks.
 
-When work touches a real codebase, the project entrypoint should reference applicable common specs. The coach may ask the user to bring back the entrypoint, SPEC, or common SPEC impact analysis.
+When work touches a real codebase, the project entrypoint should reference applicable common specs. The stage reviewer may ask the user to bring back the entrypoint, SPEC, or common SPEC impact analysis.
 
 ## Methodology Evolution
 

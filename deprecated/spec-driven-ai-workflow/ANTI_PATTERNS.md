@@ -1,6 +1,6 @@
 # Anti-Patterns
 
-Use this when the user seems to be bringing old work habits into AI-native work.
+Use this when the user seems to be bringing old work habits into the AI-assisted delivery workflow.
 
 ## Premature Technology Control
 
@@ -181,7 +181,7 @@ Smell:
 
 Coach response:
 
-- Remind the user that the target is AI-native full-cycle ability.
+- Remind the user that the target is reviewable movement through the AI-assisted delivery workflow.
 - Use AI to create the missing artifact: HTML prototype, QA checklist, SPEC, Plan, or acceptance checklist.
 - Keep human business judgment, but do not hide behind old role boundaries.
 
