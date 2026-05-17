@@ -66,16 +66,28 @@ flowchart LR
 
 Do not skip gates.
 
+## Superpowers Contract
+
+When recommending an execution action, name the Superpowers capability explicitly.
+
+Use Superpowers capability names in:
+
+- `Superpowers Capability`
+- `Next Action`
+- `Execution Prompt`
+
+Do not say generic "clarify", "plan", "review", or "implement" when a Superpowers capability applies.
+
 ## Superpowers Selection
 
 - Raw idea or unclear goal: Superpowers Brainstorm.
 - Goal clear but scope, non-goals, risks, or acceptance unclear: Superpowers Brainstorm.
-- Visible workflow unclear: Prototype / Spike.
+- Visible workflow unclear: Superpowers Prototype / Spike.
 - Business contract missing: SPEC.
-- SPEC clear, technical approach undecided: Plan.
-- Plan clear and tasks are independent: Subagent.
-- Implementation starts: TDD.
-- AI claims implementation done: Code Review.
+- SPEC clear, technical approach undecided: Superpowers Plan.
+- Plan clear and tasks are independent: Superpowers Subagent.
+- Implementation starts: Superpowers TDD.
+- AI claims implementation done: Superpowers Code Review.
 - Real environment, UI/UX, permissions, data, finance, compliance, or production risk: Human QA.
 - Accepted case reveals reusable cross-project rule: Common SPEC Impact.
 - No workflow decision needed: None.
