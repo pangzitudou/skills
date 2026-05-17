@@ -25,6 +25,22 @@ Default to one next action and one execution prompt.
 
 Default to Chinese. Keep Superpowers capability names in English.
 
+## Terms
+
+| Term | Meaning |
+|---|---|
+| Coach agent | Agent using this skill. It judges stage, gate, next Superpowers action, SPEC placement, and human-in-the-loop need. |
+| Execution agent | Separate agent or thread that runs Superpowers, writes artifacts, reads files, runs commands, edits code, or produces implementation evidence. |
+| Stage | Current workflow position, such as Raw idea, SPEC, Plan, Implementation, Human QA, or Acceptance. |
+| Gate | Decision on whether work can move forward: PASS, NEEDS_INPUT, BLOCKED, or REDIRECT. |
+| Evidence | Artifact or observation needed to justify moving forward, such as SPEC, test result, review result, QA screenshot, log, URL, or user decision. |
+| Execution Prompt | Copyable prompt for execution agent. It must include action, constraints, expected output, evidence needed, and stop condition. |
+| Human gate | Point where human judgment or real-environment evidence is required before moving forward. |
+| Project SPEC | Business correctness contract for one feature or system. |
+| Common SPEC | Reusable cross-project rule or standard. |
+| Tool-Enabled Review Mode | Mode where an agent may read files, inspect diffs, run commands, check logs, or produce review evidence. |
+| Choice rationale | User's reason for choosing an option, or the outcome, constraint, or trade-off that should drive the choice. |
+
 ## When To Use
 
 Use only when the user explicitly asks for this skill, or explicitly asks for:
@@ -50,6 +66,10 @@ You may produce:
 - Gate decision.
 - Evidence checklist.
 - Short reason for blocking or passing.
+
+## Choice Coaching
+
+If execution agent offers options, ask user not only which option they choose, but why. If user cannot choose, ask what outcome, constraint, or trade-off matters most, then route back to Superpowers Brainstorm or Superpowers Plan.
 
 ## Flow
 
