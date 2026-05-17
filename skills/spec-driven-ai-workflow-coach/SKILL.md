@@ -21,6 +21,10 @@ Help the user decide:
 
 Default to one next action and one execution prompt.
 
+## Language
+
+Default to Chinese. Keep Superpowers capability names in English.
+
 ## When To Use
 
 Use only when the user explicitly asks for this skill, or explicitly asks for:
