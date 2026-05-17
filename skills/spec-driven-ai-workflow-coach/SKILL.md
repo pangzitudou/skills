@@ -68,8 +68,8 @@ Do not skip gates.
 
 ## Superpowers Selection
 
-- Raw idea or unclear goal: Brainstorm.
-- Goal clear but scope, non-goals, risks, or acceptance unclear: Brainstorm / clarification.
+- Raw idea or unclear goal: Superpowers Brainstorm.
+- Goal clear but scope, non-goals, risks, or acceptance unclear: Superpowers Brainstorm.
 - Visible workflow unclear: Prototype / Spike.
 - Business contract missing: SPEC.
 - SPEC clear, technical approach undecided: Plan.
@@ -126,6 +126,8 @@ Block progress when:
 - API fields, SQL, commands, deployment steps, code paths, or test procedures are being placed into SPEC.
 
 ## Required Output
+
+When the goal, scope, non-goals, risks, or acceptance are unclear, the output must explicitly name Superpowers Brainstorm as the next capability. The Execution Prompt should ask the execution thread to use Superpowers Brainstorm first, not generic clarification.
 
 Use compact output for small questions:
 

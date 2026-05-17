@@ -17,7 +17,7 @@
 
 ### 第 1 周：建立共同语言
 
-- 给团队安装 `spec-driven-ai-workflow`。
+- 给团队安装 `spec-driven-ai-workflow-coach`。
 - 让每个人创建一个“AI 交付流程阶段门线程”。
 - 只要求大家问三类问题：
   - “我现在处于哪个阶段？”
