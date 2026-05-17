@@ -78,6 +78,21 @@ Use Superpowers capability names in:
 
 Do not say generic "clarify", "plan", "review", or "implement" when a Superpowers capability applies.
 
+## Execution Prompt Constraints
+
+Every Execution Prompt must constrain the execution thread.
+
+For Superpowers Brainstorm:
+
+- Use Superpowers Brainstorm explicitly.
+- Do not write full PRD, SPEC, plan, task list, or code.
+- Do not run tools, inspect files, or modify files unless Tool-Enabled Review Mode is selected.
+- Separate assumptions from user-provided facts.
+- Treat timeboxes such as "7 days" as assumptions unless the user provided them.
+- Return only decision inputs needed for the next gate.
+
+For early prototype guidance, ask for prototype hypothesis or smallest prototype scope. Do not imply that a clickable or runnable prototype must be built before the gate requires it.
+
 ## Superpowers Selection
 
 - Raw idea or unclear goal: Superpowers Brainstorm.
@@ -141,6 +156,8 @@ Block progress when:
 
 When the goal, scope, non-goals, risks, or acceptance are unclear, the output must explicitly name Superpowers Brainstorm as the next capability. The Execution Prompt should ask the execution thread to use Superpowers Brainstorm first, not generic clarification.
 
+When human-in-the-loop is not required yet, say so explicitly and name which user input is still required.
+
 Use compact output for small questions:
 
 ```markdown
@@ -173,7 +190,7 @@ PASS / NEEDS_INPUT / BLOCKED / REDIRECT
 Do exactly one thing: ...
 
 ### Superpowers Capability
-Brainstorm / Prototype / SPEC / Plan / TDD / Code Review / Subagent / Human QA / Common SPEC Impact / None
+Superpowers Brainstorm / Superpowers Prototype / SPEC / Superpowers Plan / Superpowers TDD / Superpowers Code Review / Superpowers Subagent / Human QA / Common SPEC Impact / None
 
 ### Execution Prompt
 ...
