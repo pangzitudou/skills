@@ -1,0 +1,7 @@
+interface:
+  display_name: "Concept Learning Coach"
+  short_description: "Map concepts, teach nodes, test explanation"
+  default_prompt: "Use $concept-learning-coach to help me learn [topic]. My background is [background]. My purpose is [purpose]."
+
+policy:
+  allow_implicit_invocation: false
