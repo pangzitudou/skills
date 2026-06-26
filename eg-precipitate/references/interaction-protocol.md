@@ -10,10 +10,16 @@ Questions must be easy to parse and hard to dodge.
 
 ## Per-Turn Shape
 
-Prefer this shape:
+Use this shape:
 
 ```md
 Current decision: {plain-language decision}
+Decision tree state:
+- Resolved: {short list or "none"}
+- Active branch: {the one branch being pressured now}
+- Unresolved: {short list or "none"}
+- Blocked: {short list or "none"}
+
 Recommended answer: {your recommendation and why}
 Hard question: {one question}
 ```
@@ -37,6 +43,19 @@ Do not combine:
 - implementation sequencing
 
 Pick the blocker that must be resolved next.
+
+## Decision Tree Pressure
+
+Walk every relevant branch before closing:
+
+- terminology
+- scope
+- alternatives and tradeoffs
+- constraints
+- artifact eligibility
+- next-stage readiness
+
+Do not leave a branch implicit because the current answer feels plausible.
 
 ## Plain Language First
 

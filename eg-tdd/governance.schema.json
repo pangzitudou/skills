@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents.local/eg-tdd/eg-ledger.schema.json",
+  "title": "EG TDD Ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "run_id",
+    "stage",
+    "repo",
+    "task",
+    "mode",
+    "created_at",
+    "intent",
+    "bdd",
+    "related_adrs",
+    "adr_coverage",
+    "context_read",
+    "unknowns",
+    "acceptance_tests",
+    "hypotheses",
+    "cycles",
+    "sensitivity",
+    "manual_qa",
+    "touched_files"
+  ],
+  "properties": {
+    "schema": {"const": "eg-ledger/v1"},
+    "run_id": {"type": "string", "pattern": "^EG-RUN-[A-Za-z0-9._-]+$"},
+    "stage": {"enum": ["bdd-draft", "bdd-approved", "tdd", "tdd-complete"]},
+    "repo": {"type": "string", "minLength": 1},
+    "task": {"type": "string", "minLength": 1},
+    "mode": {"enum": ["lite", "full"]},
+    "created_at": {"type": "string", "minLength": 1},
+    "intent": {"$ref": "#/$defs/artifactRef"},
+    "bdd": {"type": "array", "items": {"$ref": "#/$defs/artifactRef"}},
+    "related_adrs": {"type": "array", "items": {"$ref": "#/$defs/relatedAdr"}},
+    "adr_coverage": {"type": "array", "items": {"$ref": "#/$defs/adrCoverage"}},
+    "context_read": {"type": "array", "items": {"$ref": "#/$defs/contextEntry"}},
+    "unknowns": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "acceptance_tests": {"type": "array", "items": {"$ref": "#/$defs/testEntry"}},
+    "hypotheses": {"type": "array", "items": {"$ref": "#/$defs/hypothesis"}},
+    "cycles": {"type": "array", "items": {"$ref": "#/$defs/cycle"}},
+    "sensitivity": {"type": "array", "items": {"$ref": "#/$defs/sensitivity"}},
+    "manual_qa": {"type": "array", "items": {"$ref": "#/$defs/manualQa"}},
+    "touched_files": {"type": "array", "items": {"type": "string", "minLength": 1}}
+  },
+  "$defs": {
+    "artifactStatus": {"enum": ["draft", "review", "approved", "deprecated"]},
+    "artifactRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "status": {"$ref": "#/$defs/artifactStatus"}
+      }
+    },
+    "relatedAdr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "status"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^ADR-[0-9]+$"},
+        "type": {"enum": ["intent", "decision", "constraint"]},
+        "status": {"$ref": "#/$defs/artifactStatus"}
+      }
+    },
+    "adrCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adr", "coverage", "covered_by", "reason"],
+      "properties": {
+        "adr": {"type": "string", "pattern": "^ADR-[0-9]+$"},
+        "coverage": {"enum": ["covered", "not-applicable", "deferred"]},
+        "covered_by": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "contextEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "reason"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["bdd", "spec", "adr", "requirement", "implementation", "caller", "test", "contract", "dependency", "config", "database", "other"]},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    },
+    "testEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "derived_from", "artifact_status", "status", "red", "green"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^(AT-[0-9]+|H[0-9]+)$"},
+        "name": {"type": "string", "minLength": 1},
+        "derived_from": {"type": "string", "minLength": 1},
+        "source": {"type": "string"},
+        "artifact_status": {"$ref": "#/$defs/artifactStatus"},
+        "status": {"enum": ["green", "manual", "deferred", "merged"]},
+        "red": {"$ref": "#/$defs/red"},
+        "green": {"$ref": "#/$defs/green"}
+      }
+    },
+    "hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "derived_from", "hypothesis", "risk", "decision", "status", "evidence"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^H[0-9]+$"},
+        "derived_from": {"type": "string", "minLength": 1},
+        "source": {"type": "string"},
+        "hypothesis": {"type": "string", "minLength": 1},
+        "risk": {"enum": ["high", "medium", "low"]},
+        "decision": {"enum": ["accepted", "rejected"]},
+        "status": {"enum": ["pending", "green", "manual", "deferred", "merged", "rejected"]},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/evidence"}},
+        "name": {"type": "string"},
+        "artifact_status": {"$ref": "#/$defs/artifactStatus"},
+        "red": {"$ref": "#/$defs/red"},
+        "green": {"$ref": "#/$defs/green"},
+        "manual_qa": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "kind", "summary"],
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["bdd", "spec", "adr", "requirement", "contract", "implementation", "test", "other"]},
+        "summary": {"type": "string", "minLength": 1}
+      }
+    },
+    "cycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["test_id", "red", "green"],
+      "properties": {
+        "test_id": {"type": "string", "pattern": "^(AT-[0-9]+|H[0-9]+)$"},
+        "red": {"$ref": "#/$defs/red"},
+        "green": {"$ref": "#/$defs/green"}
+      }
+    },
+    "red": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "failed_as_expected", "summary"],
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "failed_as_expected": {"type": "boolean"},
+        "summary": {"type": "string", "minLength": 1}
+      }
+    },
+    "green": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "passed"],
+      "properties": {
+        "command": {"type": "string", "minLength": 1},
+        "passed": {"type": "boolean"}
+      }
+    },
+    "sensitivity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["test_id", "checks", "decision"],
+      "properties": {
+        "test_id": {"type": "string", "pattern": "^(AT-[0-9]+|H[0-9]+)$"},
+        "checks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "decision": {"enum": ["kept", "strengthened", "deferred"]}
+      }
+    },
+    "manualQa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["item"],
+      "properties": {
+        "hypothesis": {"type": "string"},
+        "item": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

@@ -1,83 +1,82 @@
 ---
 name: eg-precipitate
-description: Strict governance facilitator and conditional writer for Executable Governance. Use when the user wants to align on a feature, decision, constraint, or project language before implementation, or mentions Executable Governance / EG / governance precipitation / 治理沉淀 / 对齐后沉淀 artifact.
+description: "Strict Executable Governance precipitation: grill intent, scope, terms, decisions, and constraints until stable, then write CONTEXT/ADR artifacts after one preview confirmation. Use for EG fast-intent, governance precipitation, unclear feature intent, scope boundaries, decision tradeoffs, NFR constraints, or when eg-router routes to precipitate."
 ---
 
 # eg-precipitate
 
-You are a strict governance facilitator + conditional writer.
+Make intent governable. Do not implement, write BDD, run tests, or enforce gates.
 
-Your job is to make decisions clear, pressure-test them, and write governance artifacts only when conclusions are stable enough to govern future work.
+Read shared rules when needed:
 
-You do not teach the whole methodology. You do not implement. You do not run tests. You do not enforce gates. You do not write BDD.
+- `../eg/references/METHOD.md`
+- `../eg/references/ARTIFACT-MODEL.md`
+- `../eg/references/STAGE-HANDOFF.md`
 
-## Prime Directive
+Load local references only for the current branch:
 
-Reduce cognitive load, not decision pressure.
+- Interaction and decision tree pressure: `references/interaction-protocol.md`
+- Artifact eligibility: `references/precipitation-triggers.md`
+- CONTEXT/ADR formats: `references/artifact-formats.md`
+- NFR checkpoint: `references/nfr-checklist.md`
+- Failure modes: `references/failure-modes.md`
 
-Make each question easier to parse, not easier to answer. Clarity is allowed. Softening is not.
+## Loop
 
-## Operating Loop
+Walk the decision tree one branch at a time until shared understanding is stable enough for the next stage.
 
-Repeat this loop until shared understanding is reached:
+Per turn:
 
-1. State the current decision in plain language.
-2. Ask one hard question.
-3. Provide your recommended answer.
-4. Check whether anything became stable enough to write.
-5. If yes, show a write preview and wait for user confirmation.
-6. After confirmation, load the relevant reference and write the artifact.
+```md
+Current decision: ...
+Decision tree state:
+- Resolved: ...
+- Active branch: ...
+- Unresolved: ...
+- Blocked: ...
 
-Ask one question at a time. Wait for feedback before continuing.
+Recommended answer: ...
+Hard question: ...
+Potential write: ...
+```
 
-If a question can be answered by exploring the codebase or existing governance artifacts, explore them instead of asking.
+Ask one hard question. If code or existing artifacts can answer it, inspect them instead of asking.
 
-## Default Write Policy
+## Write Policy
 
 Default: do not write.
 
-Write only when:
+Write only when a term, scope boundary, decision, or constraint is stable enough to govern future work.
 
-- a term meaning is resolved
-- a scope boundary is confirmed
-- a decision passes all decision gates
-- a constraint is explicitly confirmed
-
-Never use artifacts as scratchpads. Never convert every interesting statement into an artifact.
-
-## Write Preview
-
-Before any file write, show a short preview and wait for confirmation:
+Use one confirmation:
 
 ```md
 Write preview:
 - Artifact: CONTEXT.md | ADR
-- Content: {one-sentence summary}
-- Reason: {why this is stable enough to govern future work}
+- Content: ...
+- Reason: ...
 
 Confirm write?
 ```
 
-No confirmation, no write.
+After confirmation, write immediately. Do not ask again unless the preview is no longer accurate, the path conflicts, multiple artifacts were not all confirmed, or approved artifact substance would change.
 
-## Reference Routing
+## Artifact Rules
 
-Load only the reference needed for the current step:
+- `CONTEXT.md`: durable project language only.
+- Intent ADR: business scope and Acceptance Criteria Seed. Only intent ADRs can seed BDD.
+- Decision ADR: hard-to-reverse choices with tradeoffs. Never seed BDD.
+- Constraint ADR: explicit NFRs with domain.
 
-- Interaction rules, local terminology, readable summaries: `references/interaction-protocol.md`
-- Write triggers and artifact eligibility: `references/precipitation-triggers.md`
-- CONTEXT.md and ADR formats: `references/artifact-formats.md`
-- NFR checkpoint before closing intent ADRs: `references/nfr-checklist.md`
-- Bad behavior guardrails: `references/failure-modes.md`
+Before closing an intent ADR, ask the NFR checklist once.
 
 ## Closing
 
-When the grill closes, summarize only:
+Summarize only:
 
-- resolved terms and where they were written
-- intent ADRs and their scope triples
-- decision ADRs and which gates they passed
-- constraint ADRs and their domains
-- intent ADRs ready for later BDD derivation
-
-Say explicitly when BDD derivation belongs to the next stage.
+- resolved branches and written artifacts
+- intent ADRs ready for BDD derivation
+- decision ADRs and gates passed
+- constraint ADRs and domains
+- unresolved branches
+- next stage, usually `eg-tdd`

@@ -83,9 +83,10 @@ For each node:
 2. `diagnose`: identify wrong, missing, fuzzy, or swapped concepts.
 3. `target`: name the single concept gap for this round.
 4. `teach`: teach the concept explicitly.
-5. `guided practice`: make the user process it.
-6. `application judgment`: give a scenario and ask what applies.
-7. `status update`: set node status to `wrong`, `fuzzy`, or `passed`.
+5. `rehearse`: ask the user to paraphrase the concept in their own words. No copying the teaching template structure. Must use natural language: metaphor, analogy, or personal expression. If paraphrase direction is correct but incomplete, mark `fuzzy` not `wrong` — the act of paraphrasing itself strengthens memory. If completely off, return to `teach` and retry.
+6. `guided practice`: make the user process it.
+7. `application judgment`: give a scenario and ask what applies.
+8. `status update`: set node status to `wrong`, `fuzzy`, or `passed`.
 
 ### Teaching Template
 
@@ -130,6 +131,20 @@ Be sharp about the answer. Do not shame the person. Praise only concrete progres
 Start final defense only when all `must learn` nodes are `passed`, or when the user explicitly asks to attempt early.
 
 If early, state remaining weak nodes and score caps before starting.
+
+### Closed-Book Rehearsal
+
+Before the three explanations, ask the user to do a closed-book walkthrough: without looking at the concept map or any notes, narrate the entire learning range from start to finish in their own words.
+
+Rules:
+
+- Do not show the concept map or previous teaching content during this step.
+- The user must chain concepts together, not just list them.
+- Gaps and fuzzy connections are expected. Record them but do not interrupt.
+- After the walkthrough, give targeted corrections only for missing or wrong connections.
+- This step activates working memory and consolidation. It is not graded, but gaps found here count toward weak nodes in the final output.
+
+### Three Explanations
 
 Ask the user for three explanations:
 

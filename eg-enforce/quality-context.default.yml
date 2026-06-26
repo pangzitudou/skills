@@ -1,0 +1,149 @@
+# Default quality-context selector config.
+#
+# Repos may copy this to `quality-context.yml` and tune paths/tokens/rule_packs.
+# Selection only controls Layer A context. It does not assign findings or gates.
+
+default_rule_packs:
+  - saleforteai-docs/common/CODE_REVIEW_CHECKLIST.md
+
+rules:
+  design-depth-regression:
+    include_when:
+      paths:
+        - "**/*.java"
+      tokens:
+        - "class "
+        - "interface "
+        - "Helper"
+        - "Util"
+        - "Manager"
+        - "Facade"
+    rule_packs:
+      - saleforteai-docs/common/LAYERING_SPEC.md
+      - saleforteai-docs/common/UTILITY_USAGE_SPEC.md
+
+  literal-configuration-risk:
+    include_when:
+      paths:
+        - "**/*.java"
+        - "**/*.yml"
+        - "**/*.yaml"
+        - "**/*.properties"
+      tokens:
+        - "timeout"
+        - "retry"
+        - "limit"
+        - "status"
+        - "type"
+        - "http://"
+        - "https://"
+    rule_packs:
+      - saleforteai-docs/common/API_STANDARD.md
+      - saleforteai-docs/common/UTILITY_USAGE_SPEC.md
+
+  layer-boundary-risk:
+    include_when:
+      paths:
+        - "**/controller/**"
+        - "**/service/**"
+        - "**/domain/**"
+        - "**/mapper/**"
+        - "**/repository/**"
+      tokens:
+        - "Controller"
+        - "Service"
+        - "Mapper"
+        - "Repository"
+        - "Entity"
+    rule_packs:
+      - saleforteai-docs/common/LAYERING_SPEC.md
+
+  transaction-boundary-risk:
+    include_when:
+      paths:
+        - "**/service/**"
+        - "**/mapper/**"
+        - "**/repository/**"
+        - "**/consumer/**"
+        - "**/job/**"
+      tokens:
+        - "@Transactional"
+        - "TransactionTemplate"
+        - "rollback"
+        - "setRollbackOnly"
+        - "remote"
+        - "client."
+    rule_packs:
+      - saleforteai-docs/common/TRANSACTION_SPEC.md
+      - saleforteai-docs/common/TESTING_STANDARD.md
+
+  observability-risk:
+    include_when:
+      paths:
+        - "**/*.java"
+      tokens:
+        - "log."
+        - "catch "
+        - "throw new"
+        - "Exception"
+    rule_packs:
+      - saleforteai-docs/common/LOGGING_SPEC.md
+
+  annotation-contract-risk:
+    include_when:
+      paths:
+        - "**/*.java"
+      tokens:
+        - "@SuppressWarnings"
+        - "@Disabled"
+        - "@Ignore"
+        - "@Transactional"
+        - "@Async"
+        - "@Cacheable"
+        - "@PreAuthorize"
+        - "@PostAuthorize"
+        - "TODO"
+    rule_packs:
+      - saleforteai-docs/common/ANNOTATION_STANDARD.md
+
+  side-effect-retry-risk:
+    include_when:
+      paths:
+        - "**/controller/**"
+        - "**/service/**"
+        - "**/consumer/**"
+        - "**/job/**"
+        - "**/webhook/**"
+      tokens:
+        - "retry"
+        - "idempot"
+        - "Idempotency"
+        - "UUID.randomUUID"
+        - "status"
+        - "callback"
+        - "webhook"
+        - "MQ"
+    rule_packs:
+      - saleforteai-docs/common/IDEMPOTENCY_AND_RETRY_SPEC.md
+      - saleforteai-docs/common/WEBHOOK_SPEC.md
+      - saleforteai-docs/common/TRANSACTION_SPEC.md
+
+  test-evidence-risk:
+    include_when:
+      paths:
+        - "**/src/test/**"
+        - "**/test/**"
+        - "**/src/main/**"
+        - "**/db/**"
+        - "**/migration/**"
+      tokens:
+        - "@Test"
+        - "mock"
+        - "Mock"
+        - "migration"
+        - "mapper"
+        - "idempot"
+        - "concurrent"
+    rule_packs:
+      - saleforteai-docs/common/TESTING_STANDARD.md
+      - saleforteai-docs/common/TDD_SPEC.md

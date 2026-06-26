@@ -1,0 +1,52 @@
+# enforcement.default.yml - eg-enforce enforcement profile (template)
+#
+# Copy to repo root as `enforcement.yml` and tune there.
+#
+# Levels:
+#   0 documentation-only
+#   1 advisory
+#   2 required-explanation
+#   3 soft-gate, override-able
+#   4 hard-gate, no override
+#
+# Reviewers only identify findings. scripts/enforce.py computes effective
+# levels, next_step, override consumption, and the gate.
+
+mode: strict                 # strict | adaptive
+
+governance:
+  behavior-violation:        { strict: 4, adaptive: 4, next_step: fix-code }
+  architecture-boundary:     { strict: 4, adaptive: 3, next_step: fix-code }
+  scope-violation:           { strict: 3, adaptive: 3, next_step: update-artifact-proposal }
+  ui-contract-violation:     { strict: 3, adaptive: 2, next_step: fix-code }
+  visual-regression:         { strict: 2, adaptive: 2, next_step: request-human-review }
+  traceability-missing:      { strict: 3, adaptive: 2, next_step: update-handoff }
+  artifact-status-violation: { strict: 4, adaptive: 4, next_step: update-artifact-proposal }
+  test-implementation-error: { strict: 3, adaptive: 2, next_step: fix-test }
+  enforcement-error:         { strict: 1, adaptive: 1, next_step: request-human-review }
+
+quality:
+  design-depth-regression:    { strict: 3, adaptive: 2, next_step: fix-code }
+  literal-configuration-risk: { strict: 2, adaptive: 1, next_step: fix-code }
+  layer-boundary-risk:        { strict: 3, adaptive: 2, next_step: fix-code }
+  transaction-boundary-risk:  { strict: 4, adaptive: 3, next_step: fix-code }
+  observability-risk:         { strict: 2, adaptive: 1, next_step: fix-code }
+  annotation-contract-risk:   { strict: 2, adaptive: 1, next_step: fix-code }
+  side-effect-retry-risk:     { strict: 4, adaptive: 3, next_step: fix-code }
+  test-evidence-risk:         { strict: 3, adaptive: 2, next_step: fix-test }
+
+status_ceiling:
+  draft: 0
+  review: 2
+  approved: 4
+  deprecated: 0
+  unknown: 2
+
+human_review_types:
+  - artifact-status-violation
+  - scope-violation
+
+status_exempt_types:
+  - traceability-missing
+  - test-implementation-error
+  - enforcement-error

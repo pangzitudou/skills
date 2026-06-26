@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agents.local/eg-enforce/findings.schema.json",
+  "title": "eg-enforce Reviewer Findings",
+  "description": "The contract a review subagent returns. Subagents identify findings only. enforce.py assigns enforcement_level, next_step, override consumption, and gate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["layer", "findings"],
+  "properties": {
+    "layer": { "enum": ["A", "B"] },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "artifactRef", "ruleRef", "evidence", "impact", "location", "humanVerify"],
+      "properties": {
+        "type": {
+          "description": "Layer A: quality type from enforcement.yml `quality`. Layer B: governance type from enforcement.yml `governance`. enforce.py rejects unknown types.",
+          "type": "string",
+          "minLength": 1
+        },
+        "artifactRef": {
+          "description": "Governance findings: violated artifact id (BDD-NNN#scenario-slug / ADR-NNNN / AT-NNN). Quality findings: null.",
+          "type": ["string", "null"]
+        },
+        "ruleRef": {
+          "description": "Rule source for the finding: QUALITY-RULES.md anchor, selected spec section, ADR/BDD/CONTEXT section, or handoff entry.",
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "description": "Concrete observation from the diff. For design-depth-regression include Interface burden, Hidden complexity, and Why net complexity increased.",
+          "type": "string",
+          "minLength": 1
+        },
+        "impact": {
+          "description": "Why this finding matters: behavioral, data, security, maintainability, operability, or test-confidence risk.",
+          "type": "string",
+          "minLength": 1
+        },
+        "location": {
+          "description": "file:line, or file when no line is available.",
+          "type": "string",
+          "minLength": 1
+        },
+        "humanVerify": {
+          "description": "True when a human should manually verify this even if no automated test failed.",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
