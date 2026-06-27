@@ -1,5 +1,21 @@
 # EG Stage Handoff
 
+## Diagnose -> Precipitate
+
+Optional.
+
+Required when diagnosis ran:
+
+- `/tmp/eg/<run-id>/source-matrix.yml`
+- `/tmp/eg/<run-id>/source-gap.yml`
+- `/tmp/eg/<run-id>/query-plan.yml` when external queries ran
+- `/tmp/eg/<run-id>/diagnosis.yml`
+- successful `validate-diagnosis.py`
+
+`eg-diagnose` must not write repo artifacts. `eg-precipitate` consumes only
+redacted diagnosis summaries and `handoff_to_precipitate` proposals, then grills
+before writing CONTEXT/ADR artifacts.
+
 ## Precipitate -> TDD
 
 Required:
@@ -15,11 +31,18 @@ Missing intent means route to `eg-precipitate` fast-intent. Do not derive BDD fr
 Required:
 
 - Approved BDD with human approval metadata.
+- Frozen `/tmp/eg/<run-id>/enforce-plan.yml` created immediately after BDD approval.
+- Planned `/tmp/eg/<run-id>/ci-facts.contract.json` created immediately after BDD approval.
 - Verified tests with stable ids in real test names.
+- Ready `ci_facts_contract` embedded in `.eg/handoff/<run-id>.yml`.
 - Related ADRs and ADR coverage, with every related ADR covered, not-applicable, or deferred.
 - `/tmp/eg/<run-id>/ledger.json`.
 - Repo `.eg/handoff/<run-id>.yml`.
 - Auto commit containing only this EG run's files.
+
+The final handoff must embed the frozen `enforce_plan`. TDD may fill actual
+test results and CI-required ids, but must not weaken the frozen baseline after
+human BDD approval.
 
 ## Enforce Selection
 
@@ -31,6 +54,8 @@ AND stage in {tdd-complete, enforce-ready}
 AND touched commit is in PR range
 AND intent/BDD artifacts exist and are not deprecated
 AND related ADR coverage is present
+AND enforce_plan is frozen
+AND ci_facts_contract is ready
 ```
 
 First version uses `tdd-complete` only.
@@ -69,6 +94,7 @@ The fix-agent must verify, auto-commit only fix-scope files, and write:
 ```
 
 The next enforce round consumes closure evidence. If a fingerprint remains present after closure evidence, report it as `partial-fix`. If a closed fingerprint reappears, report it as `regression`.
+If a different fingerprint appears in the same attempted `class_key`, report it as `partial-fix`; the fix agent did not sweep the issue class completely.
 
 The fix-agent must stop if the fix requires changing approved ADR/BDD substance.
 

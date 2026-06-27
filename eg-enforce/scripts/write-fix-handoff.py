@@ -22,6 +22,18 @@ def load_json(path):
         die(f"invalid json {path}: {exc}")
 
 
+def ensure_under_tmp_eg_run(path):
+    resolved = Path(path).expanduser().resolve()
+    tmp_eg = Path("/tmp/eg").resolve()
+    try:
+        resolved.relative_to(tmp_eg)
+    except ValueError:
+        die(f"output path must be under /tmp/eg/<run-id>: {resolved}")
+    if resolved == tmp_eg:
+        die("output path must include /tmp/eg/<run-id>")
+    return resolved
+
+
 def run_id_from_path(path):
     parts = Path(path).parts
     if len(parts) >= 3 and parts[-2]:
@@ -57,6 +69,7 @@ def format_entry(entry):
         f"### `{entry.get('fingerprint')}`",
         "",
         f"- lifecycle: `{entry.get('lifecycle')}`",
+        f"- class_key: `{entry.get('class_key')}`",
         f"- type: `{finding.get('type')}`",
         f"- severity: `{finding.get('severity')}`",
         f"- next_step: `{finding.get('next_step')}`",
@@ -85,6 +98,7 @@ def closure_template(entries):
                 "fingerprint": entry.get("fingerprint"),
                 "summary": "",
                 "code_change": "",
+                "class_sweep": "",
                 "tests": [],
                 "ci_facts": [],
                 "commit": "",
@@ -95,7 +109,7 @@ def closure_template(entries):
     }
 
 
-def render(ledger_path, ledger, entries):
+def render(ledger_path, ledger, entries, args):
     run_id = run_id_from_path(ledger_path)
     closure_path = f"/tmp/eg/{run_id}/closure-evidence.json"
     lines = [
@@ -104,18 +118,30 @@ def render(ledger_path, ledger, entries):
         f"Source ledger: `{ledger_path}`",
         f"Round: `{ledger.get('round')}`",
         "",
+        "## Context",
+        "",
+        f"- repo_root: `{args.repo_root or '<repo>'}`",
+        f"- pr_context: `{args.pr_context or ''}`",
+        f"- diff: `{args.diff or ''}`",
+        f"- selected_handoffs: `{args.handoffs or ''}`",
+        f"- feedback: `{args.feedback or ledger.get('source_feedback', '')}`",
+        f"- closure_evidence: `{closure_path}`",
+        "",
         "## Scope",
         "",
         "- Fix only open agent-fixable findings listed below.",
         "- Do not change approved ADR/BDD substance. Stop and ask human if a fix requires artifact changes.",
         "- Do not include unrelated refactors.",
         "- Commit the verified fix-scope changes when done.",
+        "- Allowed code-change files must be recorded in `code_change`; do not modify approved ADR/BDD substance.",
         "",
         "## Closure Contract",
         "",
         "- Every listed fingerprint must be absent in the next eg-enforce round, or you must stop with a concrete blocker.",
+        "- Sweep the whole class_key area, not only the exact fingerprint location.",
         "- Add or update a regression test when the finding is testable; otherwise record manual QA.",
         "- Run relevant verification and preserve CI/test evidence.",
+        "- After committing, run `python3 <eg-enforce-skill>/scripts/validate-fix-commit-scope.py --repo-root <repo> --closure-evidence " + closure_path + "`.",
         f"- Write closure evidence to `{closure_path}` using this shape:",
         "",
         "```json",
@@ -139,15 +165,20 @@ def main():
     ap = argparse.ArgumentParser(description="Write eg-enforce fix handoff from finding ledger.")
     ap.add_argument("--ledger", required=True, help="finding-ledger.json")
     ap.add_argument("--out", required=True, help="fix-handoff.md output")
+    ap.add_argument("--repo-root", help="Repo root for the fix agent.")
+    ap.add_argument("--pr-context", help="PR context JSON used by enforce.")
+    ap.add_argument("--diff", help="PR diff path used by enforce.")
+    ap.add_argument("--handoffs", help="selected_handoffs.json used by enforce.")
+    ap.add_argument("--feedback", help="feedback.json used to build the ledger.")
     args = ap.parse_args()
 
     ledger = load_json(args.ledger)
     entries = selected_entries(ledger)
     if not entries:
         die("no open agent-fixable findings in ledger")
-    out = Path(args.out)
+    out = ensure_under_tmp_eg_run(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render(args.ledger, ledger, entries), encoding="utf-8")
+    out.write_text(render(args.ledger, ledger, entries, args), encoding="utf-8")
     print(f"fix-handoff findings={len(entries)} -> {args.out}")
     return 0
 

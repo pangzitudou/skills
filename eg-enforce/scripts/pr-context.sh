@@ -13,6 +13,13 @@ WORKSPACE_ROOT="/home/zenia/projects/gnzs"
 ORG="68761da7cdc0e9db90ae14de" GROUP="saleforteAI"
 API="https://openapi-rdc.aliyuncs.com"
 
+ensure_tmp_eg_path() {
+  case "$1" in
+    /tmp/eg/*) return 0;;
+    *) echo "path must be under /tmp/eg/<run-id>: $1" >&2; exit 2;;
+  esac
+}
+
 while [ $# -gt 0 ]; do case "$1" in
   --repo) REPO="$2"; shift 2;;
   --source) SOURCE="$2"; shift 2;;
@@ -26,6 +33,8 @@ esac; done
 
 [ -n "$REPO" ]   || { echo "missing --repo" >&2; exit 2; }
 [ -n "$TARGET" ] || { echo "missing --target" >&2; exit 2; }
+[ -z "$OUTPUT_PATH" ] || ensure_tmp_eg_path "$OUTPUT_PATH"
+[ -z "$DIFF_PATH" ] || ensure_tmp_eg_path "$DIFF_PATH"
 command -v jq  >/dev/null || { echo "jq required" >&2; exit 2; }
 command -v git >/dev/null || { echo "git required" >&2; exit 2; }
 
@@ -44,7 +53,14 @@ git -C "$REPO_PATH" rev-parse --verify -q "origin/$TARGET^{commit}" >/dev/null \
   || { echo "FAILED_GIT_REMOTE: no origin/$TARGET" >&2; exit 1; }
 
 # diff = changes introduced on source since its merge-base with target
-[ -n "$DIFF_PATH" ] || DIFF_PATH="$(mktemp /tmp/eg-enforce-diff.XXXXXX.patch)"
+if [ -z "$DIFF_PATH" ]; then
+  if [ -n "$OUTPUT_PATH" ]; then
+    DIFF_PATH="$(dirname "$OUTPUT_PATH")/diff.patch"
+  else
+    echo "missing --diff-path or --output-path under /tmp/eg/<run-id>" >&2
+    exit 2
+  fi
+fi
 git -C "$REPO_PATH" -c core.quotepath=false diff "origin/$TARGET...$SOURCE" >"$DIFF_PATH"
 DIFF_FILES="$(git -C "$REPO_PATH" diff --name-only "origin/$TARGET...$SOURCE" | grep -c . || true)"
 
@@ -52,7 +68,7 @@ DIFF_FILES="$(git -C "$REPO_PATH" diff --name-only "origin/$TARGET...$SOURCE" | 
 YX="$WORKSPACE_ROOT/.agents/skills/yunxiao-pr-manage/scripts/yunxiao-pr-manage.sh"
 PR_URL="" PR_STATUS="UNKNOWN" PR_TITLE=""
 if [ -n "$YUNXIAO_TOKEN" ] && [ -f "$YX" ]; then
-  MANIFEST="$(mktemp /tmp/eg-enforce-manifest.XXXXXX.json)"
+  MANIFEST="$(dirname "$DIFF_PATH")/yunxiao-query-manifest.json"
   jq -n --arg o "$ORG" --arg g "$GROUP" --arg a "$API" --arg w "$WORKSPACE_ROOT" \
      --arg repo "$REPO" --arg s "$SOURCE" --arg t "$TARGET" \
      '{organizationId:$o, groupPath:$g, apiBaseUrl:$a, workspaceRoot:$w,

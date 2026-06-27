@@ -18,6 +18,37 @@ intent:
 bdd:
   - id: BDD-0001
     status: approved
+enforce_plan:
+  schema: eg-enforce-plan/v1
+  status: frozen
+  frozen_at: 2026-06-26T12:00:00+08:00
+  source: bdd-approval
+  intent:
+    id: ADR-0001
+    status: approved
+  bdd:
+    - id: BDD-0001
+      status: approved
+  related_adrs:
+    - id: ADR-0001
+      type: intent
+      status: approved
+  required_acceptance_tests:
+    - id: AT-001
+      derived_from: BDD-0001#scenario-neutral-response
+      expectation: neutral response is observable
+  expected_adversarial_domains: []
+  manual_qa_expected: []
+  out_of_scope: []
+  nfr_checkpoints: []
+ci_facts_contract:
+  schema: eg-ci-facts-contract/v1
+  status: ready
+  path: ci-facts.json
+  producer: CI job or command that publishes ci-facts.json
+  required_for_statuses: [green, merged]
+  expected_acceptance_test_ids: [AT-001]
+  required_result_ids: [AT-001, H1]
 related_adrs:
   - id: ADR-0001
     type: intent
@@ -53,3 +84,6 @@ tmp_run_dir_authoritative: false
 - Do not include `commit`; `eg-enforce` derives touched commit from git.
 - Every `related_adrs[]` item must have an `adr_coverage[]` entry.
 - `deferred` coverage is allowed, but `eg-enforce` surfaces it as a human decision.
+- `enforce_plan` is frozen immediately after human BDD approval; TDD may not weaken it later.
+- `ci_facts_contract.path` and `producer` must be known before final handoff.
+- `ci_facts_contract.required_result_ids` must exactly match tests with `status: green` or `merged`.

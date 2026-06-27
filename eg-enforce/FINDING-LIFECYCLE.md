@@ -22,6 +22,12 @@ Use this when reporting a second or later eg-enforce round, or when generating a
 
 Do not ask reviewers or fix agents to invent semantic keys. They may explain context, but scripts own identity.
 
+## Class Rule
+
+`enforce.py` also emits a `class_key` from finding type, artifact root, rule, and normalized domain/location.
+
+Fix agents must sweep the whole `class_key`, not only the exact fingerprint. If the next round finds a different fingerprint in the same attempted class, `update-finding-ledger.py` reports `partial-fix`.
+
 ## Reporting Rule
 
 Always report lifecycle buckets before ordinary findings:
@@ -47,6 +53,7 @@ The fix agent must produce `/tmp/eg/<run-id>/closure-evidence.json`:
       "fingerprint": "egf-...",
       "summary": "what changed",
       "code_change": "files/symbols changed",
+      "class_sweep": "where the same class was searched and why it is closed",
       "tests": ["stable test ids or names"],
       "ci_facts": ["ci-facts result ids, if applicable"],
       "commit": "commit sha",

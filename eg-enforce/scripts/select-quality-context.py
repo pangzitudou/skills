@@ -18,6 +18,18 @@ def die(msg: str) -> None:
     raise SystemExit(2)
 
 
+def ensure_under_tmp_eg_run(path: Path) -> Path:
+    resolved = path.expanduser().resolve()
+    tmp_eg = Path("/tmp/eg").resolve()
+    try:
+        resolved.relative_to(tmp_eg)
+    except ValueError:
+        die(f"output path must be under /tmp/eg/<run-id>: {resolved}")
+    if resolved == tmp_eg:
+        die("output path must include /tmp/eg/<run-id>")
+    return resolved
+
+
 def load_yaml(path: Path):
     try:
         doc = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -151,7 +163,9 @@ def main() -> int:
         "missing_rule_packs": missing,
         "triggers": triggers,
     }
-    Path(args.out).write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out_path = ensure_under_tmp_eg_run(Path(args.out))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"selected {len(selected)} rule packs from {len(triggers)} triggers -> {args.out}")
     if missing:
         print(f"WARN: missing rule packs: {', '.join(missing)}", file=sys.stderr)

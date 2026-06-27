@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -18,12 +19,14 @@ BDD_TESTABLE = {"approved"}
 BEHAVIOR_KINDS = {"bdd", "spec", "adr", "requirement", "contract"}
 TEST_GREEN_STATUSES = {"green", "merged"}
 TEST_HANDOFF_STATUSES = {"green", "manual", "deferred", "merged"}
+CI_FACT_STATUSES = ["green", "merged"]
 AT_ID_RE = re.compile(r"^AT-[0-9]+$")
 H_ID_RE = re.compile(r"^H[0-9]+$")
 SCENARIO_RE = re.compile(r"^BDD-[0-9]+#scenario-[a-z0-9-]+$")
 BDD_ID_RE = re.compile(r"^(BDD-[0-9]+)")
 ADR_ID_RE = re.compile(r"(ADR-[0-9]+)")
 COVERAGE_REF_RE = re.compile(r"^(BDD-[0-9]+#scenario-[a-z0-9-]+|AT-[0-9]+|H[0-9]+|manual_qa:[A-Za-z0-9._-]+)$")
+SCENARIO_ANCHOR_RE = re.compile(r"\{#(scenario-[a-z0-9-]+)\}")
 
 
 def is_str(value: Any) -> bool:
@@ -51,6 +54,25 @@ def load_json(path: Path) -> dict[str, Any]:
         print("ledger must be a JSON object", file=sys.stderr)
         raise SystemExit(2)
     return data
+
+
+def ensure_under_tmp_eg_run(path: Path) -> Path:
+    resolved = path.expanduser().resolve()
+    tmp_eg = Path("/tmp/eg").resolve()
+    try:
+        resolved.relative_to(tmp_eg)
+    except ValueError:
+        print(f"path must be under /tmp/eg/<run-id>: {resolved}", file=sys.stderr)
+        raise SystemExit(2)
+    if resolved == tmp_eg:
+        print("path must include /tmp/eg/<run-id>", file=sys.stderr)
+        raise SystemExit(2)
+    return resolved
+
+
+def canonical_hash(value: dict[str, Any]) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def parse_frontmatter(text: str) -> dict[str, Any]:
@@ -84,6 +106,38 @@ def artifact_index(repo_root: Path) -> dict[str, dict[str, Any]]:
                 "frontmatter": fm,
             }
     return out
+
+
+def bdd_scenario_index(repo_root: Path, idx: dict[str, dict[str, Any]]) -> dict[str, set[str]]:
+    scenarios: dict[str, set[str]] = {}
+    for artifact_id, info in idx.items():
+        if info.get("type") != "bdd":
+            continue
+        rel_path = info.get("path")
+        if not isinstance(rel_path, str):
+            continue
+        path = repo_root / rel_path
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        scenarios[artifact_id] = {f"{artifact_id}#{anchor}" for anchor in SCENARIO_ANCHOR_RE.findall(text)}
+    return scenarios
+
+
+def validate_scenario_ref(
+    errors: list[str],
+    ref: str,
+    path: str,
+    bdd_ids: set[str],
+    scenario_refs: dict[str, set[str]],
+) -> None:
+    match = BDD_ID_RE.match(ref)
+    bid = match.group(1) if match else ""
+    if bid not in bdd_ids:
+        errors.append(f"{path} references {bid}, absent from bdd[]")
+        return
+    if scenario_refs and ref not in scenario_refs.get(bid, set()):
+        errors.append(f"{path} references missing BDD scenario anchor {ref}")
 
 
 def require(errors: list[str], obj: dict[str, Any], key: str, path: str) -> Any:
@@ -137,6 +191,188 @@ def validate_bdd_approval(errors: list[str], bdd_id: str, idx: dict[str, dict[st
             errors.append(f"{bdd_id} is approved but missing {key}")
     if fm.get("approved_by") != "human":
         errors.append(f"{bdd_id}.approved_by must be human")
+
+
+def artifact_ref_signature(ref: Any) -> tuple[str, str]:
+    if not isinstance(ref, dict):
+        return "", ""
+    return str(ref.get("id") or ""), str(ref.get("status") or "")
+
+
+def artifact_ref_set(refs: Any) -> set[tuple[str, str]]:
+    if not isinstance(refs, list):
+        return set()
+    return {artifact_ref_signature(ref) for ref in refs if isinstance(ref, dict)}
+
+
+def related_adr_set(refs: Any) -> set[tuple[str, str, str]]:
+    if not isinstance(refs, list):
+        return set()
+    return {
+        (str(ref.get("id") or ""), str(ref.get("type") or ""), str(ref.get("status") or ""))
+        for ref in refs if isinstance(ref, dict)
+    }
+
+
+def validate_plan_artifact_list(
+    errors: list[str],
+    plan: dict[str, Any],
+    data: dict[str, Any],
+    key: str,
+    path: str,
+) -> None:
+    planned = plan.get(key)
+    actual = data.get(key)
+    if not isinstance(planned, list) or not planned:
+        errors.append(f"{path}.{key} must be a non-empty list")
+        return
+    if key == "related_adrs":
+        if related_adr_set(planned) != related_adr_set(actual):
+            errors.append(f"{path}.{key} must match ledger {key}; do not change governance baseline after freeze")
+    elif artifact_ref_set(planned) != artifact_ref_set(actual):
+        errors.append(f"{path}.{key} must match ledger {key}; do not change governance baseline after freeze")
+
+
+def validate_enforce_plan(
+    errors: list[str],
+    data: dict[str, Any],
+    bdd_ids: set[str],
+    scenario_refs: dict[str, set[str]],
+) -> set[str]:
+    plan = data.get("enforce_plan")
+    required_at_ids: set[str] = set()
+    if not isinstance(plan, dict):
+        errors.append("enforce_plan must be an object")
+        return required_at_ids
+
+    if plan.get("schema") != "eg-enforce-plan/v1":
+        errors.append("enforce_plan.schema must be eg-enforce-plan/v1")
+    if plan.get("status") != "frozen":
+        errors.append("enforce_plan.status must be frozen before planning validation")
+    if not is_str(plan.get("frozen_at")):
+        errors.append("enforce_plan.frozen_at is required")
+    if plan.get("source") != "bdd-approval":
+        errors.append("enforce_plan.source must be bdd-approval")
+
+    if artifact_ref_signature(plan.get("intent")) != artifact_ref_signature(data.get("intent")):
+        errors.append("enforce_plan.intent must match ledger intent")
+    validate_plan_artifact_list(errors, plan, data, "bdd", "enforce_plan")
+    validate_plan_artifact_list(errors, plan, data, "related_adrs", "enforce_plan")
+
+    required_tests = plan.get("required_acceptance_tests")
+    if not isinstance(required_tests, list) or not required_tests:
+        errors.append("enforce_plan.required_acceptance_tests must be non-empty")
+        return required_at_ids
+
+    seen: set[str] = set()
+    for i, item in enumerate(required_tests):
+        path = f"enforce_plan.required_acceptance_tests[{i}]"
+        if not isinstance(item, dict):
+            errors.append(f"{path} must be an object")
+            continue
+        tid = item.get("id")
+        derived = item.get("derived_from")
+        if not isinstance(tid, str) or not AT_ID_RE.match(tid):
+            errors.append(f"{path}.id must match AT-<number>")
+        elif tid in seen:
+            errors.append(f"{path}.id duplicates {tid}")
+        else:
+            seen.add(tid)
+            required_at_ids.add(tid)
+        if not isinstance(derived, str) or not SCENARIO_RE.match(derived):
+            errors.append(f"{path}.derived_from must be BDD-N#scenario-slug")
+        else:
+            validate_scenario_ref(errors, derived, f"{path}.derived_from", bdd_ids, scenario_refs)
+        if not is_str(item.get("expectation")):
+            errors.append(f"{path}.expectation is required")
+
+    for key in ("expected_adversarial_domains", "manual_qa_expected", "out_of_scope", "nfr_checkpoints"):
+        if not isinstance(plan.get(key), list):
+            errors.append(f"enforce_plan.{key} must be a list")
+    return required_at_ids
+
+
+def validate_ci_facts_contract(
+    errors: list[str],
+    data: dict[str, Any],
+    required_at_ids: set[str],
+    *,
+    final: bool,
+) -> None:
+    contract = data.get("ci_facts_contract")
+    if not isinstance(contract, dict):
+        errors.append("ci_facts_contract must be an object")
+        return
+    if contract.get("schema") != "eg-ci-facts-contract/v1":
+        errors.append("ci_facts_contract.schema must be eg-ci-facts-contract/v1")
+    expected_status = "ready" if final else "planned"
+    if contract.get("status") != expected_status:
+        errors.append(f"ci_facts_contract.status must be {expected_status}")
+    if not is_str(contract.get("path")):
+        errors.append("ci_facts_contract.path is required")
+    if not is_str(contract.get("producer")):
+        errors.append("ci_facts_contract.producer is required")
+    if contract.get("required_for_statuses") != CI_FACT_STATUSES:
+        errors.append(f"ci_facts_contract.required_for_statuses must be {CI_FACT_STATUSES}")
+
+    expected_at = contract.get("expected_acceptance_test_ids")
+    if not isinstance(expected_at, list):
+        errors.append("ci_facts_contract.expected_acceptance_test_ids must be a list")
+        expected_at = []
+    expected_at_set = {item for item in expected_at if isinstance(item, str)}
+    if expected_at_set != required_at_ids:
+        errors.append("ci_facts_contract.expected_acceptance_test_ids must match enforce_plan required AT ids")
+
+    required_result_ids = contract.get("required_result_ids")
+    if not isinstance(required_result_ids, list):
+        errors.append("ci_facts_contract.required_result_ids must be a list")
+        required_result_ids = []
+    required_result_set = {item for item in required_result_ids if isinstance(item, str)}
+    if len(required_result_set) != len(required_result_ids):
+        errors.append("ci_facts_contract.required_result_ids must contain unique strings")
+
+    if final:
+        green_ids = {
+            str(item.get("id"))
+            for item in handoff_tests(data)
+            if isinstance(item, dict) and item.get("status") in TEST_GREEN_STATUSES and is_str(item.get("id"))
+        }
+        if required_result_set != green_ids:
+            missing = sorted(green_ids - required_result_set)
+            extra = sorted(required_result_set - green_ids)
+            if missing:
+                errors.append(f"ci_facts_contract.required_result_ids missing green/merged tests: {', '.join(missing)}")
+            if extra:
+                errors.append(f"ci_facts_contract.required_result_ids includes non-green/non-merged tests: {', '.join(extra)}")
+
+
+def validate_frozen_plan_file(
+    errors: list[str],
+    data: dict[str, Any],
+    ledger_path: Path | None,
+) -> None:
+    if ledger_path is None:
+        return
+    plan = data.get("enforce_plan")
+    if not isinstance(plan, dict) or plan.get("status") != "frozen":
+        return
+    frozen_path = ledger_path.parent / "enforce-plan.yml"
+    try:
+        frozen = yaml.safe_load(frozen_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        errors.append(f"frozen enforce plan file missing: {frozen_path}")
+        return
+    except yaml.YAMLError as exc:
+        errors.append(f"invalid frozen enforce plan file {frozen_path}: {exc}")
+        return
+    if not isinstance(frozen, dict):
+        errors.append(f"frozen enforce plan file {frozen_path} must contain an object")
+        return
+    frozen_hash = canonical_hash(frozen)
+    if data.get("frozen_enforce_plan_hash") != frozen_hash:
+        errors.append("frozen_enforce_plan_hash must match /tmp/eg/<run-id>/enforce-plan.yml")
+    if canonical_hash(plan) != frozen_hash:
+        errors.append("ledger.enforce_plan differs from frozen /tmp/eg/<run-id>/enforce-plan.yml")
 
 
 def validate_context(errors: list[str], data: dict[str, Any]) -> dict[str, str]:
@@ -212,6 +448,7 @@ def validate_adr_coverage(
     errors: list[str],
     data: dict[str, Any],
     idx: dict[str, dict[str, Any]],
+    scenario_refs: dict[str, set[str]],
     *,
     final: bool,
 ) -> None:
@@ -283,6 +520,8 @@ def validate_adr_coverage(
         for ref in refs:
             if not isinstance(ref, str) or not COVERAGE_REF_RE.match(ref):
                 errors.append(f"{path}.covered_by contains invalid ref {ref!r}")
+            elif scenario_refs and SCENARIO_RE.match(ref):
+                validate_scenario_ref(errors, ref, f"{path}.covered_by", set(scenario_refs), scenario_refs)
         if not is_str(reason):
             errors.append(f"{path}.reason is required")
 
@@ -341,6 +580,7 @@ def validate_acceptance_tests(
     errors: list[str],
     tests: Any,
     bdd_ids: set[str],
+    scenario_refs: dict[str, set[str]],
     *,
     final: bool,
 ) -> list[dict[str, Any]]:
@@ -372,9 +612,7 @@ def validate_acceptance_tests(
         if not isinstance(derived, str) or not SCENARIO_RE.match(derived):
             errors.append(f"{path}.derived_from must be BDD-N#scenario-slug")
         else:
-            bid = BDD_ID_RE.match(derived).group(1)
-            if bid not in bdd_ids:
-                errors.append(f"{path}.derived_from references {bid}, absent from bdd[]")
+            validate_scenario_ref(errors, derived, f"{path}.derived_from", bdd_ids, scenario_refs)
         if test.get("artifact_status") not in ARTIFACT_STATUSES:
             errors.append(f"{path}.artifact_status must be an artifact status")
         if test.get("status") not in TEST_HANDOFF_STATUSES:
@@ -389,6 +627,7 @@ def validate_hypotheses(
     errors: list[str],
     hypotheses: Any,
     bdd_ids: set[str],
+    scenario_refs: dict[str, set[str]],
     idx: dict[str, dict[str, Any]],
     *,
     final: bool,
@@ -429,9 +668,7 @@ def validate_hypotheses(
             if not SCENARIO_RE.match(str(derived)):
                 errors.append(f"{path}.derived_from must be internal or BDD-N#scenario-slug")
             else:
-                bid = BDD_ID_RE.match(str(derived)).group(1)
-                if bid not in bdd_ids:
-                    errors.append(f"{path}.derived_from references {bid}, absent from bdd[]")
+                validate_scenario_ref(errors, str(derived), f"{path}.derived_from", bdd_ids, scenario_refs)
         else:
             source = hyp.get("source")
             if not is_str(source):
@@ -475,14 +712,14 @@ def validate_hypotheses(
     return out
 
 
-def validate(data: dict[str, Any], phase: str, repo_root: Path | None) -> list[str]:
+def validate(data: dict[str, Any], phase: str, repo_root: Path | None, ledger_path: Path | None) -> list[str]:
     errors: list[str] = []
     final = phase == "final"
     required = [
         "schema", "run_id", "stage", "repo", "task", "mode", "created_at",
-        "intent", "bdd", "related_adrs", "adr_coverage", "context_read",
-        "unknowns", "acceptance_tests", "hypotheses", "cycles", "sensitivity",
-        "manual_qa", "touched_files",
+        "intent", "bdd", "enforce_plan", "ci_facts_contract", "related_adrs",
+        "adr_coverage", "context_read", "unknowns", "acceptance_tests",
+        "hypotheses", "cycles", "sensitivity", "manual_qa", "touched_files",
     ]
     for key in required:
         if key not in data:
@@ -498,9 +735,12 @@ def validate(data: dict[str, Any], phase: str, repo_root: Path | None) -> list[s
         errors.append("run_id must start with EG-RUN-")
 
     idx = artifact_index(repo_root) if repo_root else {}
+    scenario_refs = bdd_scenario_index(repo_root, idx) if repo_root else {}
     intent_id, intent_status = validate_artifact_ref(errors, data.get("intent"), "intent", idx, require_live=bool(repo_root))
     if intent_status in ARTIFACT_STATUSES and intent_status not in INTENT_OK:
         errors.append("intent.status must be review or approved")
+    if intent_status == "review":
+        errors.append("intent.status must be approved before freezing plan, writing tests, or emitting handoff")
     if repo_root and intent_id:
         live = idx.get(intent_id)
         if live and live.get("type") != "intent":
@@ -520,10 +760,13 @@ def validate(data: dict[str, Any], phase: str, repo_root: Path | None) -> list[s
                 if repo_root:
                     validate_bdd_approval(errors, bid, idx)
 
+    required_at_ids = validate_enforce_plan(errors, data, bdd_ids, scenario_refs)
+    validate_frozen_plan_file(errors, data, ledger_path)
+    validate_ci_facts_contract(errors, data, required_at_ids, final=final)
     validate_context(errors, data)
-    validate_acceptance_tests(errors, data.get("acceptance_tests"), bdd_ids, final=final)
-    hypotheses = validate_hypotheses(errors, data.get("hypotheses"), bdd_ids, idx, final=final)
-    validate_adr_coverage(errors, data, idx, final=final)
+    validate_acceptance_tests(errors, data.get("acceptance_tests"), bdd_ids, scenario_refs, final=final)
+    hypotheses = validate_hypotheses(errors, data.get("hypotheses"), bdd_ids, scenario_refs, idx, final=final)
+    validate_adr_coverage(errors, data, idx, scenario_refs, final=final)
 
     if final:
         accepted = [h for h in hypotheses if h.get("decision") == "accepted"]
@@ -580,7 +823,7 @@ def handoff_manual_qa(data: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
-def emit_handoff(data: dict[str, Any], ledger_path: Path, out_path: Path) -> None:
+def emit_handoff(data: dict[str, Any], ledger_path: Path, out_path: Path, *, force: bool = False) -> None:
     handoff = {
         "schema": "eg-handoff/v1",
         "run_id": data["run_id"],
@@ -589,6 +832,8 @@ def emit_handoff(data: dict[str, Any], ledger_path: Path, out_path: Path) -> Non
         "agent": "codex",
         "intent": data["intent"],
         "bdd": data["bdd"],
+        "enforce_plan": data["enforce_plan"],
+        "ci_facts_contract": data["ci_facts_contract"],
         "related_adrs": data["related_adrs"],
         "adr_coverage": data["adr_coverage"],
         "tests": handoff_tests(data),
@@ -597,6 +842,9 @@ def emit_handoff(data: dict[str, Any], ledger_path: Path, out_path: Path) -> Non
         "tmp_run_dir_authoritative": False,
     }
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    if out_path.exists() and not force:
+        print(f"ERROR: handoff already exists; pass --force-handoff to overwrite: {out_path}", file=sys.stderr)
+        raise SystemExit(2)
     out_path.write_text(yaml.safe_dump(handoff, sort_keys=False, allow_unicode=True), encoding="utf-8")
 
 
@@ -606,6 +854,7 @@ def main() -> int:
     parser.add_argument("--phase", choices=["planning", "final"], default="planning")
     parser.add_argument("--repo-root", help="Repo root to validate live ADR/BDD frontmatter.")
     parser.add_argument("--emit-handoff", help="On clean final validation, write .eg/handoff/<run-id>.yml")
+    parser.add_argument("--force-handoff", action="store_true", help="Allow overwriting an existing handoff.")
     parser.add_argument("--emit-manifest", help="Deprecated; use --emit-handoff", default=None)
     args = parser.parse_args()
 
@@ -613,19 +862,19 @@ def main() -> int:
         print("ERROR: --emit-manifest is deprecated; use --emit-handoff", file=sys.stderr)
         return 2
 
-    ledger_path = Path(args.path)
+    ledger_path = ensure_under_tmp_eg_run(Path(args.path))
     data = load_json(ledger_path)
     phase = "final" if args.emit_handoff else args.phase
     repo_root = Path(args.repo_root).resolve() if args.repo_root else None
 
-    errors = validate(data, phase, repo_root)
+    errors = validate(data, phase, repo_root, ledger_path)
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
 
     if args.emit_handoff:
-        emit_handoff(data, ledger_path, Path(args.emit_handoff))
+        emit_handoff(data, ledger_path, Path(args.emit_handoff), force=args.force_handoff)
         print(f"OK: {ledger_path} (final); handoff -> {args.emit_handoff}")
     else:
         print(f"OK: {ledger_path} ({phase})")

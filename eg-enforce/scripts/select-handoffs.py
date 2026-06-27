@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -27,14 +28,29 @@ DEFAULT_ACTIVE_STAGES = ("tdd-complete",)
 HANDOFF_PREFIX = ".eg/handoff/"
 HANDOFF_SUFFIXES = (".yml", ".yaml")
 TEST_STATUSES = {"green", "manual", "deferred", "merged"}
+TEST_FACT_STATUSES = {"green", "merged"}
 ADR_STATUSES = {"draft", "review", "approved", "deprecated"}
 ADR_TYPES = {"intent", "decision", "constraint"}
 COVERAGE_STATES = {"covered", "not-applicable", "deferred"}
+SCENARIO_REF_RE = re.compile(r"^BDD-[0-9]+#scenario-[a-z0-9-]+$")
+SCENARIO_ANCHOR_RE = re.compile(r"\{#(scenario-[a-z0-9-]+)\}")
 
 
 def die(message: str) -> None:
     print(f"ERROR: {message}", file=sys.stderr)
     raise SystemExit(2)
+
+
+def ensure_under_tmp_eg_run(path: Path) -> Path:
+    resolved = path.expanduser().resolve()
+    tmp_eg = Path("/tmp/eg").resolve()
+    try:
+        resolved.relative_to(tmp_eg)
+    except ValueError:
+        die(f"output path must be under /tmp/eg/<run-id>: {resolved}")
+    if resolved == tmp_eg:
+        die("output path must include /tmp/eg/<run-id>")
+    return resolved
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -129,8 +145,54 @@ def build_artifact_index(repo_root: Path) -> dict[str, dict[str, Any]]:
                 "path": str(path.relative_to(repo_root)),
                 "status": fm.get("status"),
                 "type": fm.get("type") or ("bdd" if subdir.endswith("bdd") else "adr"),
+                "frontmatter": fm,
             }
     return index
+
+
+def bdd_scenario_index(repo_root: Path, artifact_index: dict[str, dict[str, Any]]) -> dict[str, set[str]]:
+    scenarios: dict[str, set[str]] = {}
+    for artifact_id, info in artifact_index.items():
+        if info.get("type") != "bdd":
+            continue
+        rel_path = info.get("path")
+        if not isinstance(rel_path, str):
+            continue
+        path = repo_root / rel_path
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        scenarios[artifact_id] = {f"{artifact_id}#{anchor}" for anchor in SCENARIO_ANCHOR_RE.findall(text)}
+    return scenarios
+
+
+def validate_approved_bdd_metadata(bdd_id: str, live: dict[str, Any] | None, errors: list[str]) -> None:
+    if not live or live.get("status") != "approved":
+        return
+    fm = live.get("frontmatter", {})
+    if not isinstance(fm, dict):
+        errors.append(f"bdd {bdd_id} frontmatter is missing")
+        return
+    for key in ("approved_by", "approved_at", "approval_source"):
+        if not optional_str(fm.get(key)):
+            errors.append(f"bdd {bdd_id} is approved but missing {key}")
+    if fm.get("approved_by") != "human":
+        errors.append(f"bdd {bdd_id}.approved_by must be human")
+
+
+def validate_scenario_ref(
+    ref: str,
+    bdd_ids: set[str],
+    scenario_refs: dict[str, set[str]],
+    label: str,
+    errors: list[str],
+) -> None:
+    root = artifact_root(ref)
+    if root not in bdd_ids:
+        errors.append(f"{label} references {root}, absent from bdd[]")
+        return
+    if scenario_refs and ref not in scenario_refs.get(root, set()):
+        errors.append(f"{label} references missing BDD scenario anchor {ref}")
 
 
 def artifact_root(ref: str) -> str:
@@ -208,12 +270,145 @@ def optional_str(value: Any) -> str:
     return value if isinstance(value, str) else ""
 
 
+def ref_signature(ref: Any) -> tuple[str, str]:
+    if not isinstance(ref, dict):
+        return "", ""
+    return optional_str(ref.get("id")), optional_str(ref.get("status"))
+
+
+def ref_set(refs: Any) -> set[tuple[str, str]]:
+    if not isinstance(refs, list):
+        return set()
+    return {ref_signature(ref) for ref in refs if isinstance(ref, dict)}
+
+
+def related_ref_set(refs: Any) -> set[tuple[str, str, str]]:
+    if not isinstance(refs, list):
+        return set()
+    return {
+        (optional_str(ref.get("id")), optional_str(ref.get("type")), optional_str(ref.get("status")))
+        for ref in refs if isinstance(ref, dict)
+    }
+
+
+def validate_enforce_plan_contract(
+    data: dict[str, Any],
+    scenario_refs: dict[str, set[str]],
+    errors: list[str],
+) -> tuple[dict[str, Any], set[str]]:
+    plan = data.get("enforce_plan")
+    required_at_ids: set[str] = set()
+    if not isinstance(plan, dict):
+        errors.append("enforce_plan must be an object")
+        return {}, required_at_ids
+    if plan.get("schema") != "eg-enforce-plan/v1":
+        errors.append("enforce_plan.schema must be eg-enforce-plan/v1")
+    if plan.get("status") != "frozen":
+        errors.append("enforce_plan.status must be frozen")
+    if not optional_str(plan.get("frozen_at")):
+        errors.append("enforce_plan.frozen_at is required")
+    if plan.get("source") != "bdd-approval":
+        errors.append("enforce_plan.source must be bdd-approval")
+    if ref_signature(plan.get("intent")) != ref_signature(data.get("intent")):
+        errors.append("enforce_plan.intent must match handoff intent")
+    if ref_set(plan.get("bdd")) != ref_set(data.get("bdd")):
+        errors.append("enforce_plan.bdd must match handoff bdd")
+    if related_ref_set(plan.get("related_adrs")) != related_ref_set(data.get("related_adrs")):
+        errors.append("enforce_plan.related_adrs must match handoff related_adrs")
+
+    required_tests = plan.get("required_acceptance_tests")
+    if not isinstance(required_tests, list) or not required_tests:
+        errors.append("enforce_plan.required_acceptance_tests must be non-empty")
+    else:
+        for index, item in enumerate(required_tests):
+            if not isinstance(item, dict):
+                errors.append(f"enforce_plan.required_acceptance_tests[{index}] must be an object")
+                continue
+            tid = optional_str(item.get("id"))
+            if not tid.startswith("AT-"):
+                errors.append(f"enforce_plan.required_acceptance_tests[{index}].id must be AT-*")
+            elif tid in required_at_ids:
+                errors.append(f"enforce_plan.required_acceptance_tests[{index}].id duplicates {tid}")
+            else:
+                required_at_ids.add(tid)
+            derived = optional_str(item.get("derived_from"))
+            bdd_ids = {
+                optional_str(ref.get("id"))
+                for ref in data.get("bdd", []) or []
+                if isinstance(ref, dict) and optional_str(ref.get("id"))
+            }
+            if not derived:
+                errors.append(f"enforce_plan.required_acceptance_tests[{index}].derived_from is required")
+            elif not SCENARIO_REF_RE.match(derived):
+                errors.append(f"enforce_plan.required_acceptance_tests[{index}].derived_from must be BDD-N#scenario-slug")
+            elif artifact_root(derived) not in bdd_ids:
+                errors.append(
+                    f"enforce_plan.required_acceptance_tests[{index}].derived_from references "
+                    f"{artifact_root(derived)}, absent from bdd[]"
+                )
+            else:
+                validate_scenario_ref(
+                    derived,
+                    bdd_ids,
+                    scenario_refs,
+                    f"enforce_plan.required_acceptance_tests[{index}].derived_from",
+                    errors,
+                )
+            if not optional_str(item.get("expectation")):
+                errors.append(f"enforce_plan.required_acceptance_tests[{index}].expectation is required")
+    return plan, required_at_ids
+
+
+def validate_ci_facts_contract(
+    data: dict[str, Any],
+    tests: list[dict[str, Any]],
+    required_at_ids: set[str],
+    errors: list[str],
+) -> dict[str, Any]:
+    contract = data.get("ci_facts_contract")
+    if not isinstance(contract, dict):
+        errors.append("ci_facts_contract must be an object")
+        return {}
+    if contract.get("schema") != "eg-ci-facts-contract/v1":
+        errors.append("ci_facts_contract.schema must be eg-ci-facts-contract/v1")
+    if contract.get("status") != "ready":
+        errors.append("ci_facts_contract.status must be ready")
+    if not optional_str(contract.get("path")):
+        errors.append("ci_facts_contract.path is required")
+    if not optional_str(contract.get("producer")):
+        errors.append("ci_facts_contract.producer is required")
+    if contract.get("required_for_statuses") != ["green", "merged"]:
+        errors.append("ci_facts_contract.required_for_statuses must be [green, merged]")
+    expected_at = contract.get("expected_acceptance_test_ids")
+    expected_at_set = {item for item in expected_at or [] if isinstance(item, str)}
+    if not isinstance(expected_at, list) or expected_at_set != required_at_ids:
+        errors.append("ci_facts_contract.expected_acceptance_test_ids must match enforce_plan required AT ids")
+    required_ids = contract.get("required_result_ids")
+    required_set = {item for item in required_ids or [] if isinstance(item, str)}
+    if not isinstance(required_ids, list) or len(required_set) != len(required_ids):
+        errors.append("ci_facts_contract.required_result_ids must be a unique string list")
+    green_ids = {
+        optional_str(item.get("id"))
+        for item in tests
+        if item.get("status") in TEST_FACT_STATUSES and optional_str(item.get("id"))
+    }
+    if required_set != green_ids:
+        missing = sorted(green_ids - required_set)
+        extra = sorted(required_set - green_ids)
+        if missing:
+            errors.append(f"ci_facts_contract.required_result_ids missing green/merged tests: {', '.join(missing)}")
+        if extra:
+            errors.append(f"ci_facts_contract.required_result_ids includes non-green/non-merged tests: {', '.join(extra)}")
+    return contract
+
+
 def validate_handoff(
     *,
     repo_root: Path,
     path: str,
     data: dict[str, Any],
     artifact_index: dict[str, dict[str, Any]],
+    scenario_refs: dict[str, set[str]],
     base_ref: str | None,
     head_ref: str | None,
 ) -> tuple[dict[str, Any], list[str]]:
@@ -284,6 +479,7 @@ def validate_handoff(
                 label="bdd",
                 errors=errors,
             )
+            validate_approved_bdd_metadata(bdd_id, live, errors)
             bdd_out.append({
                 "id": bdd_id,
                 "status": item.get("status"),
@@ -352,6 +548,9 @@ def validate_handoff(
             if not isinstance(refs, list):
                 errors.append(f"adr_coverage[{index}].covered_by must be a list")
                 refs = []
+            for ref in refs:
+                if isinstance(ref, str) and SCENARIO_REF_RE.match(ref):
+                    validate_scenario_ref(ref, bdd_ids, scenario_refs, f"adr_coverage[{index}].covered_by", errors)
             if not reason:
                 errors.append(f"adr_coverage[{index}].reason is required")
             coverage_out.append({
@@ -383,9 +582,10 @@ def validate_handoff(
             if not derived_from:
                 errors.append(f"tests[{index}].derived_from is required")
             elif derived_from != "internal":
-                root = artifact_root(derived_from)
-                if root not in bdd_ids:
-                    errors.append(f"tests[{index}].derived_from references {root}, absent from bdd[]")
+                if not SCENARIO_REF_RE.match(derived_from):
+                    errors.append(f"tests[{index}].derived_from must be BDD-N#scenario-slug or internal")
+                else:
+                    validate_scenario_ref(derived_from, bdd_ids, scenario_refs, f"tests[{index}].derived_from", errors)
             else:
                 source = optional_str(item.get("source"))
                 if not source:
@@ -411,6 +611,9 @@ def validate_handoff(
                 "status": status,
             })
 
+    enforce_plan, required_at_ids = validate_enforce_plan_contract(data, scenario_refs, errors)
+    ci_facts_contract = validate_ci_facts_contract(data, tests_out, required_at_ids, errors)
+
     manual_qa = data.get("manual_qa") or []
     if not isinstance(manual_qa, list):
         errors.append("manual_qa must be a list when present")
@@ -424,6 +627,8 @@ def validate_handoff(
         "commit_source": "handoff" if declared_commit else commit_source,
         "intent": intent_out,
         "bdd": bdd_out,
+        "enforce_plan": enforce_plan,
+        "ci_facts_contract": ci_facts_contract,
         "related_adrs": related_out,
         "adr_coverage": coverage_out,
         "tests": tests_out,
@@ -482,6 +687,7 @@ def main() -> int:
     diff_text = load_diff(diff_path)
     changed_handoffs = extract_changed_handoffs(diff_text)
     artifact_index = build_artifact_index(repo_root)
+    scenario_refs = bdd_scenario_index(repo_root, artifact_index)
 
     selected: list[dict[str, Any]] = []
     skipped: list[dict[str, str]] = []
@@ -499,6 +705,7 @@ def main() -> int:
             path=rel_path,
             data=data,
             artifact_index=artifact_index,
+            scenario_refs=scenario_refs,
             base_ref=base_ref,
             head_ref=head_ref,
         )
@@ -506,6 +713,20 @@ def main() -> int:
             errors.extend(f"{rel_path}: {error}" for error in handoff_errors)
         else:
             selected.append(handoff)
+
+    seen_test_ids: dict[str, str] = {}
+    for handoff in selected:
+        for test in handoff.get("tests", []) or []:
+            tid = optional_str(test.get("id"))
+            if not tid:
+                continue
+            previous = seen_test_ids.get(tid)
+            if previous and previous != handoff.get("run_id"):
+                errors.append(
+                    f"duplicate bare test id {tid} across handoffs {previous} and {handoff.get('run_id')}; "
+                    "use unique ids or enforce one run at a time"
+                )
+            seen_test_ids[tid] = optional_str(handoff.get("run_id"))
 
     output = {
         "schema": "eg-enforce-handoff-selection/v1",
@@ -519,7 +740,9 @@ def main() -> int:
         "skipped": skipped,
         "errors": errors,
     }
-    Path(args.out).write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out_path = ensure_under_tmp_eg_run(Path(args.out))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     if errors:
         for error in errors:

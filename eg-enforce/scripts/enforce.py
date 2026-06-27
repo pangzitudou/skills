@@ -35,11 +35,25 @@ import yaml
 SEVERITY = {0: "documentation", 1: "advisory", 2: "required-explanation",
             3: "soft-gate", 4: "hard-gate"}
 ARTIFACT_PREFIX_RE = None  # not needed; we strip '#'
+FACT_PASS_STATUSES = {"passed", "success", "green"}
+FACT_KNOWN_STATUSES = FACT_PASS_STATUSES | {"failed", "failure", "error", "timeout", "cancelled", "canceled", "skipped"}
 
 
 def die(msg: str) -> None:
     print(f"ERROR: {msg}", file=sys.stderr)
     raise SystemExit(2)
+
+
+def ensure_under_tmp_eg_run(path):
+    resolved = Path(path).expanduser().resolve()
+    tmp_eg = Path("/tmp/eg").resolve()
+    try:
+        resolved.relative_to(tmp_eg)
+    except ValueError:
+        die(f"output path must be under /tmp/eg/<run-id>: {resolved}")
+    if resolved == tmp_eg:
+        die("output path must include /tmp/eg/<run-id>")
+    return resolved
 
 
 def load_yaml(path: str):
@@ -78,6 +92,14 @@ def normalize_fingerprint_location(value):
     return re.sub(r"(?<=\S):\d+(?::\d+)?\b", "", text)
 
 
+def normalize_class_domain(finding):
+    explicit = finding.get("domain") or finding.get("component")
+    if explicit:
+        return normalize_fingerprint_location(explicit)
+    text = normalize_fingerprint_location(finding.get("location"))
+    return re.split(r"[#\s]", text, maxsplit=1)[0]
+
+
 def finding_fingerprint_basis(finding):
     return {
         "type": normalize_fingerprint_part(finding.get("type")),
@@ -91,6 +113,23 @@ def finding_fingerprint(finding):
     basis = finding_fingerprint_basis(finding)
     raw = "\n".join(basis[key] for key in ("type", "artifactRef", "ruleRef", "location"))
     return "egf-" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
+
+
+def finding_class_basis(finding):
+    artifact = normalize_fingerprint_part(artifact_id(finding.get("artifactRef")) or finding.get("artifactRef"))
+    domain = normalize_class_domain(finding)
+    return {
+        "type": normalize_fingerprint_part(finding.get("type")),
+        "artifactRoot": artifact,
+        "ruleRef": normalize_fingerprint_part(finding.get("ruleRef")),
+        "domain": domain,
+    }
+
+
+def finding_class_key(finding):
+    basis = finding_class_basis(finding)
+    raw = "\n".join(basis[key] for key in ("type", "artifactRoot", "ruleRef", "domain"))
+    return "egc-" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
 
 
 def parse_frontmatter(text):
@@ -174,7 +213,10 @@ def collect_findings(args, handoff_tests):
             htest = handoff_tests.get(tid, {}) if tid else {}
             artifact_ref = r.get("artifact_ref") or htest.get("artifactRef")
             artifact_status = r.get("artifact_status") or htest.get("artifact_status")
-            if r.get("status") in ("passed", "success", "green"):
+            status = str(r.get("status") or "").lower()
+            if status not in FACT_KNOWN_STATUSES:
+                die(f"ci facts result {tid or '<unknown>'} has unknown status {r.get('status')!r}")
+            if status in FACT_PASS_STATUSES:
                 continue
             if tid and tid not in handoff_tests and args.handoffs:
                 findings.append({
@@ -188,13 +230,13 @@ def collect_findings(args, handoff_tests):
                     "source": "ci-facts",
                 })
                 continue
-            if r.get("status") == "failed":
+            if tid in handoff_tests:
                 findings.append({
                     "type": "behavior-violation",
                     "artifactRef": artifact_ref,
                     "ruleRef": "ci-facts",
                     "evidence": json.dumps(r.get("evidence", {}), ensure_ascii=False),
-                    "impact": "A traced CI test failed; changed behavior may violate artifact-backed expectations.",
+                    "impact": f"A traced CI test status is {status}; changed behavior may violate artifact-backed expectations.",
                     "location": r.get("test", ""),
                     "humanVerify": False,
                     "source": "ci-facts",
@@ -212,6 +254,7 @@ def load_selected_handoffs(path):
         if not isinstance(handoff, dict):
             continue
         intent = handoff.get("intent", {}) if isinstance(handoff.get("intent"), dict) else {}
+        ci_contract = handoff.get("ci_facts_contract", {}) if isinstance(handoff.get("ci_facts_contract"), dict) else {}
         for item in handoff.get("manual_qa", []) or []:
             if isinstance(item, dict) and item.get("item"):
                 manual_qa.append({
@@ -226,13 +269,22 @@ def load_selected_handoffs(path):
             artifact_ref = derived
             if derived == "internal":
                 artifact_ref = test.get("source") or intent.get("id")
-            tests[str(test["id"])] = {
+            tid = str(test["id"])
+            if tid in tests and tests[tid].get("run_id") != handoff.get("run_id", ""):
+                errors.append(
+                    f"duplicate bare test id {tid} across handoffs "
+                    f"{tests[tid].get('run_id')} and {handoff.get('run_id', '')}"
+                )
+                continue
+            tests[tid] = {
                 "artifactRef": artifact_ref,
                 "artifact_status": test.get("artifact_status"),
                 "derived_from": derived,
                 "source": test.get("source"),
                 "run_id": handoff.get("run_id", ""),
                 "handoff": handoff.get("path", ""),
+                "ci_facts_path": ci_contract.get("path", ""),
+                "ci_facts_producer": ci_contract.get("producer", ""),
                 "status": test.get("status"),
                 "name": test.get("name"),
             }
@@ -300,10 +352,25 @@ def load_ci_facts(path):
         tid = fact_id(result)
         if not tid:
             die(f"ci facts results[{index}] has no id/test_id/name containing AT/H id")
+        status = str(result.get("status") or "").lower()
+        if status not in FACT_KNOWN_STATUSES:
+            die(f"ci facts results[{index}] status must be one of {sorted(FACT_KNOWN_STATUSES)}")
         if tid in by_id:
             die(f"ci facts duplicate result id {tid}")
         by_id[tid] = result
     return by_id
+
+
+def facts_path_matches_contract(actual_path, expected_path):
+    if not expected_path:
+        return True
+    actual = Path(actual_path)
+    expected = Path(str(expected_path))
+    if str(actual_path) == str(expected_path):
+        return True
+    if actual.name == expected.name:
+        return True
+    return str(actual).endswith(str(expected))
 
 
 def validate_facts_coverage(args, handoff_tests):
@@ -315,10 +382,30 @@ def validate_facts_coverage(args, handoff_tests):
         return
     facts = load_ci_facts(args.facts)
     if facts is None:
-        die("ci-facts.json is required because selected handoffs contain green/merged tests")
+        paths = sorted({
+            str(test.get("ci_facts_path"))
+            for test in handoff_tests.values()
+            if test.get("ci_facts_path")
+        })
+        suffix = f" (contract path: {', '.join(paths)})" if paths else ""
+        die(f"ci-facts.json is required because selected handoffs contain green/merged tests{suffix}")
+    expected_paths = sorted({
+        str(test.get("ci_facts_path"))
+        for test in handoff_tests.values()
+        if test.get("status") in ("green", "merged") and test.get("ci_facts_path")
+    })
+    mismatched = [path for path in expected_paths if not facts_path_matches_contract(args.facts, path)]
+    if mismatched:
+        die(f"--facts {args.facts} does not match ci_facts_contract.path: {', '.join(mismatched)}")
     missing = [tid for tid in required if tid not in facts]
     if missing:
         die(f"ci facts missing results for handoff tests: {', '.join(missing)}")
+    not_passed = [
+        tid for tid in required
+        if str(facts[tid].get("status") or "").lower() not in FACT_PASS_STATUSES
+    ]
+    if not_passed:
+        die(f"ci facts required results are not passing: {', '.join(not_passed)}")
 
 
 def resolve_status(finding, artifact_index, manifest_status):
@@ -450,6 +537,8 @@ def main() -> int:
         entry = {
             "fingerprint": finding_fingerprint(f),
             "fingerprint_basis": finding_fingerprint_basis(f),
+            "class_key": finding_class_key(f),
+            "class_key_basis": finding_class_basis(f),
             "type": ftype, "section": section, "artifactRef": f.get("artifactRef"),
             "ruleRef": f["ruleRef"], "evidence": f["evidence"], "impact": f["impact"],
             "location": f["location"], "source": f["source"],
@@ -495,7 +584,9 @@ def main() -> int:
         "agent_fix": agent_fix,
         "waived": [r for r in resolved if r["waived"]],
     }
-    Path(args.out).write_text(json.dumps(feedback, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    out_path = ensure_under_tmp_eg_run(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(feedback, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     print(f"gate={gate} blocked={blocked} "
           f"(hard:{counts['hard-gate']} soft:{counts['soft-gate']} "

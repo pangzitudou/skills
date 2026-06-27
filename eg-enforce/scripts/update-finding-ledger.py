@@ -22,6 +22,18 @@ def die(message):
     raise SystemExit(2)
 
 
+def ensure_under_tmp_eg_run(path):
+    resolved = Path(path).expanduser().resolve()
+    tmp_eg = Path("/tmp/eg").resolve()
+    try:
+        resolved.relative_to(tmp_eg)
+    except ValueError:
+        die(f"output path must be under /tmp/eg/<run-id>: {resolved}")
+    if resolved == tmp_eg:
+        die("output path must include /tmp/eg/<run-id>")
+    return resolved
+
+
 def load_json(path, required=True):
     if not path:
         return {}
@@ -46,6 +58,14 @@ def normalize_location(value):
     return re.sub(r"(?<=\S):\d+(?::\d+)?\b", "", text)
 
 
+def normalize_class_domain(finding):
+    explicit = finding.get("domain") or finding.get("component")
+    if explicit:
+        return normalize_location(explicit)
+    text = normalize_location(finding.get("location"))
+    return re.split(r"[#\s]", text, maxsplit=1)[0]
+
+
 def fingerprint_basis(finding):
     return {
         "type": normalize_part(finding.get("type")),
@@ -63,9 +83,34 @@ def fingerprint(finding):
     return "egf-" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
 
 
+def artifact_root(value):
+    if not value:
+        return ""
+    return str(value).split("#", 1)[0]
+
+
+def class_basis(finding):
+    if isinstance(finding.get("class_key_basis"), dict):
+        return finding["class_key_basis"]
+    return {
+        "type": normalize_part(finding.get("type")),
+        "artifactRoot": normalize_part(artifact_root(finding.get("artifactRef"))),
+        "ruleRef": normalize_part(finding.get("ruleRef")),
+        "domain": normalize_class_domain(finding),
+    }
+
+
+def class_key(finding):
+    if finding.get("class_key"):
+        return str(finding["class_key"])
+    basis = class_basis(finding)
+    raw = "\n".join(str(basis.get(key, "")) for key in ("type", "artifactRoot", "ruleRef", "domain"))
+    return "egc-" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]
+
+
 def compact_finding(finding):
     keys = (
-        "fingerprint", "type", "section", "artifactRef", "ruleRef", "evidence",
+        "fingerprint", "class_key", "type", "section", "artifactRef", "ruleRef", "evidence",
         "impact", "location", "source", "severity", "next_step",
         "enforcement_level", "human_review_required", "humanVerify", "waived",
     )
@@ -88,6 +133,14 @@ def load_closure_attempts(path):
         fp = item.get("fingerprint")
         if not fp:
             die("closure evidence entry missing fingerprint")
+        for key in ("summary", "code_change", "commit", "class_sweep"):
+            if not item.get(key):
+                die(f"closure evidence for {fp} missing {key}")
+        tests = item.get("tests")
+        if not isinstance(tests, list) or not tests:
+            die(f"closure evidence for {fp} must include non-empty tests[]")
+        if "ci_facts" not in item or not isinstance(item.get("ci_facts"), list):
+            die(f"closure evidence for {fp} must include ci_facts[]")
         attempts[str(fp)] = item
     return attempts
 
@@ -102,6 +155,8 @@ def build_current_findings(feedback):
         fp = fingerprint(item)
         item["fingerprint"] = fp
         item.setdefault("fingerprint_basis", fingerprint_basis(item))
+        item.setdefault("class_key", class_key(item))
+        item.setdefault("class_key_basis", class_basis(item))
         item["agent_fixable"] = fp in agent_fixable
         if fp in by_fp:
             by_fp[fp].setdefault("_duplicates", []).append(compact_finding(item))
@@ -157,7 +212,7 @@ def clone_history(entry):
     return history if isinstance(history, list) else []
 
 
-def update_seen_entry(prev, finding, round_no, attempt):
+def update_seen_entry(prev, finding, round_no, attempt, class_attempted=False):
     was_closed = prev and prev.get("status") == "closed"
     was_open = prev and prev.get("status") == "open"
     if finding.get("waived"):
@@ -165,6 +220,8 @@ def update_seen_entry(prev, finding, round_no, attempt):
     elif was_closed:
         lifecycle, status, close_reason = "regression", "open", None
     elif was_open and attempt:
+        lifecycle, status, close_reason = "partial-fix", "open", None
+    elif not prev and class_attempted:
         lifecycle, status, close_reason = "partial-fix", "open", None
     elif was_open:
         lifecycle, status, close_reason = "persisted", "open", None
@@ -183,6 +240,8 @@ def update_seen_entry(prev, finding, round_no, attempt):
         "agent_fixable": bool(finding.get("agent_fixable")),
         "finding": compact_finding(finding),
         "fingerprint_basis": finding.get("fingerprint_basis", fingerprint_basis(finding)),
+        "class_key": finding.get("class_key", class_key(finding)),
+        "class_key_basis": finding.get("class_key_basis", class_basis(finding)),
         "closure_required": closure_required(finding),
         "closure_attempts": list((prev or {}).get("closure_attempts", [])),
         "history": clone_history(prev or {}),
@@ -215,6 +274,7 @@ def summary_item(entry):
     finding = entry.get("finding", {})
     return {
         "fingerprint": entry.get("fingerprint"),
+        "class_key": entry.get("class_key"),
         "type": finding.get("type"),
         "artifactRef": finding.get("artifactRef"),
         "location": finding.get("location"),
@@ -245,19 +305,28 @@ def main():
     ap.add_argument("--previous", help="previous finding-ledger.json; defaults to --out if it exists")
     ap.add_argument("--feedback", required=True, help="feedback.json from enforce.py")
     ap.add_argument("--closure-evidence", help="optional fix-agent closure evidence JSON")
-    ap.add_argument("--round", required=True, type=int, help="enforce round number")
+    ap.add_argument("--round", type=int, help="enforce round number; defaults to previous round + 1")
     ap.add_argument("--out", required=True, help="finding-ledger.json output")
     args = ap.parse_args()
-
-    if args.round < 1:
-        die("--round must be >= 1")
 
     feedback = load_json(args.feedback)
     previous_path = args.previous or args.out
     previous = load_json(previous_path, required=False)
+    previous_round = previous.get("round") if isinstance(previous.get("round"), int) else 0
+    expected_round = previous_round + 1 if previous else 1
+    round_no = args.round if args.round is not None else expected_round
+    if round_no != expected_round:
+        die(f"--round must be {expected_round} from existing ledger state, got {round_no}")
+    if round_no < 1 or round_no > 3:
+        die("--round must be between 1 and 3")
     previous_by_fp = previous_entries(previous)
     current_by_fp = build_current_findings(feedback)
     attempts = load_closure_attempts(args.closure_evidence)
+    attempted_classes = {
+        previous_by_fp[fp].get("class_key")
+        for fp in attempts
+        if fp in previous_by_fp and previous_by_fp[fp].get("class_key")
+    }
 
     entries = []
     all_fps = sorted(set(previous_by_fp) | set(current_by_fp))
@@ -265,27 +334,28 @@ def main():
         prev = previous_by_fp.get(fp)
         finding = current_by_fp.get(fp)
         if finding:
-            entries.append(update_seen_entry(prev, finding, args.round, attempts.get(fp)))
+            class_attempted = bool(finding.get("class_key") in attempted_classes)
+            entries.append(update_seen_entry(prev, finding, round_no, attempts.get(fp), class_attempted))
         elif prev:
-            entries.append(update_absent_entry(prev, args.round))
+            entries.append(update_absent_entry(prev, round_no))
 
     out = {
         "schema_version": 1,
         "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "round": args.round,
+        "round": round_no,
         "source_feedback": str(Path(args.feedback)),
         "source_previous": str(Path(previous_path)) if Path(previous_path).exists() else None,
         "source_closure_evidence": str(Path(args.closure_evidence)) if args.closure_evidence else None,
-        "summary": build_summary(entries, args.round),
+        "summary": build_summary(entries, round_no),
         "findings": entries,
     }
-    out_path = Path(args.out)
+    out_path = ensure_under_tmp_eg_run(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     c = out["summary"]["counts"]
     print(
-        f"finding-ledger round={args.round} open={c['open']} "
+        f"finding-ledger round={round_no} open={c['open']} "
         f"new={c['new']} persisted={c['persisted']} partial={c['partial-fix']} "
         f"regression={c['regression']} closed={c['closed']} -> {args.out}"
     )

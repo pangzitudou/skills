@@ -14,6 +14,8 @@
     "created_at",
     "intent",
     "bdd",
+    "enforce_plan",
+    "ci_facts_contract",
     "related_adrs",
     "adr_coverage",
     "context_read",
@@ -35,6 +37,8 @@
     "created_at": {"type": "string", "minLength": 1},
     "intent": {"$ref": "#/$defs/artifactRef"},
     "bdd": {"type": "array", "items": {"$ref": "#/$defs/artifactRef"}},
+    "enforce_plan": {"$ref": "#/$defs/enforcePlan"},
+    "ci_facts_contract": {"$ref": "#/$defs/ciFactsContract"},
     "related_adrs": {"type": "array", "items": {"$ref": "#/$defs/relatedAdr"}},
     "adr_coverage": {"type": "array", "items": {"$ref": "#/$defs/adrCoverage"}},
     "context_read": {"type": "array", "items": {"$ref": "#/$defs/contextEntry"}},
@@ -65,6 +69,78 @@
         "id": {"type": "string", "pattern": "^ADR-[0-9]+$"},
         "type": {"enum": ["intent", "decision", "constraint"]},
         "status": {"$ref": "#/$defs/artifactStatus"}
+      }
+    },
+    "enforcePlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "status",
+        "frozen_at",
+        "source",
+        "intent",
+        "bdd",
+        "related_adrs",
+        "required_acceptance_tests",
+        "expected_adversarial_domains",
+        "manual_qa_expected",
+        "out_of_scope",
+        "nfr_checkpoints"
+      ],
+      "properties": {
+        "schema": {"const": "eg-enforce-plan/v1"},
+        "status": {"enum": ["draft", "frozen"]},
+        "frozen_at": {"type": "string"},
+        "source": {"const": "bdd-approval"},
+        "intent": {"$ref": "#/$defs/artifactRef"},
+        "bdd": {"type": "array", "items": {"$ref": "#/$defs/artifactRef"}},
+        "related_adrs": {"type": "array", "items": {"$ref": "#/$defs/relatedAdr"}},
+        "required_acceptance_tests": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/plannedAcceptanceTest"}
+        },
+        "expected_adversarial_domains": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "manual_qa_expected": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "out_of_scope": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "nfr_checkpoints": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "plannedAcceptanceTest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "derived_from", "expectation"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^AT-[0-9]+$"},
+        "derived_from": {"type": "string", "pattern": "^BDD-[0-9]+#scenario-[a-z0-9-]+$"},
+        "expectation": {"type": "string", "minLength": 1}
+      }
+    },
+    "ciFactsContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "status",
+        "path",
+        "producer",
+        "required_for_statuses",
+        "expected_acceptance_test_ids",
+        "required_result_ids"
+      ],
+      "properties": {
+        "schema": {"const": "eg-ci-facts-contract/v1"},
+        "status": {"enum": ["planned", "ready"]},
+        "path": {"type": "string", "minLength": 1},
+        "producer": {"type": "string"},
+        "required_for_statuses": {
+          "type": "array",
+          "prefixItems": [{"const": "green"}, {"const": "merged"}],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "expected_acceptance_test_ids": {"type": "array", "items": {"type": "string", "pattern": "^AT-[0-9]+$"}},
+        "required_result_ids": {"type": "array", "items": {"type": "string", "pattern": "^(AT-[0-9]+|H[0-9]+)$"}}
       }
     },
     "adrCoverage": {
