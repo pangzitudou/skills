@@ -1,6 +1,6 @@
 ---
 name: eg-tdd
-description: EG TDD stage: approved intent -> approved BDD -> tests -> implementation -> handoff -> scoped commit.
+description: "EG TDD stage: approved intent -> approved BDD -> tests -> implementation -> handoff -> scoped commit."
 disable-model-invocation: true
 ---
 
@@ -8,137 +8,125 @@ disable-model-invocation: true
 
 Turn approved intent into approved BDD, verified tests, minimal implementation, repo handoff, and commit.
 
-Set:
+The `eg` CLI owns BDD format, scaffolding, the BDD completeness gate, and wraps
+the ledger/freeze/handoff validators. You own the grilling, the four-question
+ruler, the adversarial hypotheses, and writing the actual tests and code. Author
+BDD as data; do not hand-write `.md`. Run `eg schema bdd` when unsure of fields.
 
 ```bash
-SKILL_DIR="$(readlink -f .agents/skills/eg-tdd)"
+EG="python3 $(readlink -f .agents/skills/eg)/cli/eg.py"
 ```
 
-Shared rules:
+Read judgment references for the current branch (format is in the CLI):
 
-- `../eg/references/METHOD.md`
-- `../eg/references/ARTIFACT-MODEL.md`
-- `../eg/references/STAGE-HANDOFF.md`
+- BDD meaning ruler: `BDD-FORMAT.md` (questions ①②④ — observability, readability, implementation-independence)
+- Handoff contract: `HANDOFF-FORMAT.md`
+- Shared method: `../eg/references/METHOD.md`, `ARTIFACT-MODEL.md`, `STAGE-HANDOFF.md`
 
-Local references:
+## Storage
 
-- BDD format and preview: `BDD-FORMAT.md`
-- Handoff format: `HANDOFF-FORMAT.md`
-- Ledger schema reference: `governance.schema.json`
-- CI facts shape: `../eg-enforce/CI-FACTS-FORMAT.md`
+BDD is authored as data under `/tmp/eg/<run>/`; `eg seal` commits the **data**
+`docs/bdd/NNNN-slug.yml` (source of truth) and renders a git-ignored `.md` for
+the legacy readers. `eg govern` / `eg commit-check` regenerate the `.md` from the
+committed `.yml` first, so no reader is migrated. The ledger stays JSON machine
+state; `freeze` / `govern` / `commit-check` wrap the existing validators. When
+you fill the ledger's `touched_files` for the commit, list the committed `.yml`
+(e.g. `docs/bdd/NNNN-slug.yml`), not the rendered `.md`.
 
 ## Required Start
 
-Input must include exactly one active intent ADR in `docs/adr/` with:
-
-- `type: intent`
-- `status: review` or `approved`
-- `Acceptance Criteria Seed`
-
-If missing, draft, or only a decision ADR exists, stop and return to `eg-precipitate` fast-intent. If multiple intent ADRs could apply, ask which one governs this run. BDD must derive from intent ADR. `review` intent may only produce BDD draft/preview; intent must be `approved` before freezing the enforce plan or writing tests.
-
-Create run state before any test:
+Input must include exactly one active intent ADR with `type: intent`,
+`status: review` or `approved`, and an Acceptance Criteria Seed. If missing or
+only a decision ADR exists, stop and return to `eg-precipitate`. BDD must derive
+from an intent ADR.
 
 ```bash
-python3 "$SKILL_DIR/scripts/new-governance.py" \
-  --repo <repo-name> --task <task-slug> --mode lite --intent-adr ADR-NNNN
+$EG new tdd --repo-root <repo-root> --task <task-slug> --intent-adr ADR-NNNN --mode lite
 ```
 
-Use `--mode full` for bug fixes, permissions, idempotency/retry, concurrency, transactions, database changes, external contracts, webhooks, async work, or cross-module orchestration.
-
-Start completion criterion: the run has a `/tmp/eg/<run-id>/ledger.json` tied to one intent ADR, or the agent has stopped with the exact missing intent decision.
+Use `--mode full` for bug fixes, permissions, idempotency/retry, concurrency,
+transactions, database changes, external contracts, webhooks, async work, or
+cross-module orchestration.
 
 ## Gate 1: BDD Approval
 
-1. Read intent, related decision/constraint ADRs, and local `CONTEXT.md`.
-2. Write draft BDD directly in `docs/bdd/` with `status: draft`.
-3. For every Acceptance Criteria Seed item, derive at least one happy scenario and one edge/negative scenario.
-4. Show a human-readable preview:
-
-```md
-BDD preview:
-...
-
-Approve?
-If approved, I will:
-- set this BDD to approved with approval metadata
-- freeze enforce-plan and CI facts contract
-- continue to acceptance tests and TDD
-```
-
-5. Before approving BDD, ensure the intent ADR is `status: approved`. If it is still `review`, keep BDD as draft and route back to `eg-precipitate` for intent approval.
-6. If user approves, set `status: approved`, add `approved_by`, `approved_at`, and `approval_source`, then continue to freeze baseline. Do not stop before freezing, even if the user asks to stop after approval.
-7. If the user requests changes, keep draft, revise, and preview again.
-8. Fill `/tmp/eg/<run-id>/ledger.json` with frozen-baseline inputs:
-   - `bdd`
-   - `related_adrs`
-   - `enforce_plan.required_acceptance_tests`
-   - `enforce_plan.expected_adversarial_domains`
-   - `enforce_plan.manual_qa_expected`
-   - `enforce_plan.out_of_scope`
-   - `enforce_plan.nfr_checkpoints`
-   - `ci_facts_contract.path`
-   - `ci_facts_contract.producer`
-9. Freeze enforce handoff baseline:
+1. Read the intent ADR, related decision/constraint ADRs, and `CONTEXT.md`.
+2. Draft BDD. For **every** Acceptance Criteria Seed item, derive at least one happy AND at least one edge/negative scenario:
 
 ```bash
-python3 "$SKILL_DIR/scripts/freeze-enforce-plan.py" /tmp/eg/<run-id>/ledger.json
+$EG bdd-new <run> --title "<feature>" --derived-from ADR-NNNN
+cat <<'YAML' | $EG merge <run> bdd-0001
+scenarios:
+  scenario-<slug>:
+    title: "<scenario title>"
+    kind: happy            # happy | edge
+    given: ["<precondition>"]
+    when:  ["<action>"]
+    then:  ["<observable outcome>"]
+YAML
 ```
 
-This writes `/tmp/eg/<run-id>/enforce-plan.yml` and `/tmp/eg/<run-id>/ci-facts.contract.json`.
-The script also writes `frozen_enforce_plan_hash` into the ledger. Later validation must match the ledger plan, hash, and frozen file.
+3. `eg check <run> bdd-NNNN` enforces the countable rules (each scenario has Given/When/Then; at least one happy AND one edge; `derived_from` resolves to an intent ADR). Then apply the meaning ruler yourself: is `Then` observable, can business read it, would it hold under a different implementation? Rewrite until it passes both.
+4. Preview and get human approval:
 
-Never write tests before explicit BDD approval.
-If the user asked to stop after BDD approval, stop only after approval metadata is written and `freeze-enforce-plan.py` succeeds.
+```bash
+$EG render <run> bdd-0001     # human-readable preview, no repo write
+```
 
-Gate 1 completion criterion: either BDD remains draft with a concrete human question, or approved BDD metadata exists and `freeze-enforce-plan.py` has written both `enforce-plan.yml` and `ci-facts.contract.json`.
+5. On explicit approval, set status and seal (renders to `docs/bdd/`, stamps approval metadata):
+
+```bash
+$EG set  <run> bdd-0001 status approved
+$EG seal <run> bdd-0001
+```
+
+Never seal/approve BDD before the human approves. Keep `draft` until then.
+
+6. Freeze the enforce baseline immediately after approval. Author the frozen inputs into the ledger, then freeze:
+
+```bash
+cat <<'YAML' | $EG merge <run> ledger
+intent: { id: ADR-NNNN, status: approved }
+bdd: [ { id: BDD-0001, status: approved } ]
+related_adrs: [ { id: ADR-NNNN, type: intent, status: approved } ]
+enforce_plan:
+  required_acceptance_tests:
+    - { id: AT-001, derived_from: "BDD-0001#scenario-<slug>", expectation: "<observable>" }
+  expected_adversarial_domains: []
+  manual_qa_expected: []
+  out_of_scope: []
+  nfr_checkpoints: []
+ci_facts_contract: { producer: "<CI job/command>", path: "ci-facts.json" }
+YAML
+$EG freeze <run>          # writes enforce-plan.yml + ci-facts.contract.json + frozen hash
+```
 
 ## Gate 2: Tests, Implementation, Handoff
 
-1. Complete `/tmp/eg/<run-id>/ledger.json`.
-   - `related_adrs` must still match the frozen `enforce_plan.related_adrs`.
-   - `adr_coverage` must classify every related ADR as `covered`, `not-applicable`, or `deferred`.
-   - `ci_facts_contract.expected_acceptance_test_ids` must match frozen planned AT ids.
-2. Run planning validation:
+1. Complete the ledger: `adr_coverage` (every related ADR `covered`/`not-applicable`/`deferred`), and `ci_facts_contract.expected_acceptance_test_ids` matching the frozen plan.
+2. Validate planning:
 
 ```bash
-python3 "$SKILL_DIR/scripts/validate-governance.py" /tmp/eg/<run-id>/ledger.json --phase planning --repo-root <repo>
+$EG govern <run> --phase planning
 ```
 
-3. Write acceptance tests first. Each test id must be in the real test name and derive from a BDD scenario.
-4. Confirm RED fails for the intended behavior.
-5. Generate adversarial hypotheses before non-AT tests. Expected outcomes must cite BDD, spec, ADR, requirement, or contract; implementation-only oracle is invalid.
-6. For accepted hypotheses, drive RED -> GREEN -> sensitivity review.
-7. Before final validation, set:
+3. Write acceptance tests first. Each test id must appear in the real test name and derive from a BDD scenario. Confirm RED fails for the intended behavior.
+4. Generate adversarial hypotheses before non-AT tests. Expected outcomes must cite BDD, spec, ADR, requirement, or contract — never an implementation-only oracle. Drive RED -> GREEN -> sensitivity review.
+5. Before final validation, set in the ledger:
    - `ci_facts_contract.status: ready`
-   - `ci_facts_contract.required_result_ids`: exactly every `AT-*` or `H*` with `status: green` or `merged`
-8. Validate final and emit handoff:
+   - `ci_facts_contract.required_result_ids`: exactly every `AT-*`/`H*` with status `green` or `merged`.
+6. Validate final and emit the handoff:
 
 ```bash
-python3 "$SKILL_DIR/scripts/validate-governance.py" \
-  /tmp/eg/<run-id>/ledger.json \
-  --repo-root <repo> \
-  --emit-handoff <repo>/.eg/handoff/<run-id>.yml
+$EG govern <run> --phase final --emit-handoff      # -> <repo>/.eg/handoff/<run-id>.yml
 ```
 
-The handoff command refuses to overwrite an existing `.eg/handoff/<run-id>.yml` unless `--force-handoff` is explicitly passed.
+7. Commit only this run's files. Stage code, tests, BDD/ADR status changes, and the handoff, then:
 
-9. Print a commit plan, then auto-commit only touched EG-run files. Do not ask again.
-
-Gate 2 completion criterion: final validation emitted `.eg/handoff/<run-id>.yml`, every green or merged test has a required CI fact id, and a scoped commit exists unless unrelated dirty overlap blocked it.
-
-Coverage and CI facts rules live in `../eg/references/ARTIFACT-MODEL.md` and `HANDOFF-FORMAT.md`. Gate 2 must satisfy final validation: no related ADR may be absent, the frozen `enforce_plan` may not be weakened, and no green or merged test may lack a required CI fact id.
-
-## Auto Commit
-
-Commit only after final validation passes and required tests run green.
-
-Do:
-
-- `git status --short`
-- add only code, tests, BDD/ADR status changes, and `.eg/handoff/<run-id>.yml`
-- run `python3 "$SKILL_DIR/scripts/validate-commit-scope.py" --repo-root <repo> --ledger /tmp/eg/<run-id>/ledger.json --handoff <repo>/.eg/handoff/<run-id>.yml`
-- commit with `Intent`, `BDD`, and `Run` in the message
+```bash
+$EG commit-check <run> --handoff .eg/handoff/<run-id>.yml
+git commit -m "..."        # include Intent, BDD, and Run in the message
+```
 
 Stop if related files overlap unrelated dirty changes. Never commit `/tmp/eg`.
 
@@ -146,7 +134,7 @@ Stop if related files overlap unrelated dirty changes. Never commit `/tmp/eg`.
 
 - Invent business intent.
 - Derive BDD from a decision ADR.
-- Write tests against draft/review BDD.
+- Seal/approve BDD before human approval, or write tests against draft BDD.
 - Edit approved ADR/BDD substance to make code pass.
 - Let implementation define the assertion oracle.
-- Emit enforcement level or gate judgment.
+- Emit enforcement level or gate judgment — that is `eg-enforce` only.
