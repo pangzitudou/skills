@@ -1,6 +1,6 @@
 ---
 name: eg-enforce
-description: EG enforce stage: PR gate from handoffs, CI facts, isolated reviews, lifecycle ledger, and one next question.
+description: "EG enforce stage: PR gate from handoffs, CI facts, isolated reviews, lifecycle ledger, and one next question."
 disable-model-invocation: true
 ---
 
@@ -8,155 +8,103 @@ disable-model-invocation: true
 
 Run the PR-time EG outer loop. Report gate and ask one next question. Do not fix code.
 
-Set:
+The `eg` CLI wraps the gate pipeline and guards reviewer findings. `enforce.py`
+alone assigns enforcement level, next step, and gate — you never judge the gate.
+You run the isolated reviewers and supply CI facts. Run `eg schema findings` for
+the findings format instead of reading the schema file.
 
 ```bash
-SKILL_DIR="$(readlink -f .agents/skills/eg-enforce)"
+EG="python3 $(readlink -f .agents/skills/eg)/cli/eg.py"
 ```
 
-Shared references:
+Read reviewer-judgment references for the layer you are running:
 
-- `../eg/references/METHOD.md`
-- `../eg/references/ARTIFACT-MODEL.md`
-- `../eg/references/STAGE-HANDOFF.md`
-
-Local references:
-
-- `QUALITY-REVIEW.md`
-- `QUALITY-RULES.md`
-- `ARTIFACT-REVIEW.md`
-- `FINDING-LIFECYCLE.md`
-- `CI-FACTS-FORMAT.md`
-- `enforcement.default.yml`
-- `findings.schema.json`
+- `QUALITY-REVIEW.md`, `QUALITY-RULES.md` (Layer A)
+- `ARTIFACT-REVIEW.md` (Layer B)
+- `FINDING-LIFECYCLE.md`, `CI-FACTS-FORMAT.md`
+- Shared method: `../eg/references/METHOD.md`, `ARTIFACT-MODEL.md`, `STAGE-HANDOFF.md`
 
 ## Invariants
 
-- Reviewers identify findings only.
-- `scripts/enforce.py` alone assigns enforcement level, next step, waiver consumption, and gate.
-- Artifact status may enter enforcement. Enforcement level never comes from upstream artifacts, CI, handoff, or reviewers.
-- Reviewers are isolated. Do not pass conversation history, implementer rationale, or `/tmp/eg` ledger into reviewer subagents.
+- Reviewers identify findings only. `eg enforce` (enforce.py) assigns enforcement level, next step, waiver consumption, and gate.
+- Enforcement level never comes from artifacts, CI, handoff, or reviewers.
+- Reviewers are isolated. Do not pass conversation history, implementer rationale, or the ledger into reviewer subagents.
 - CI owns test execution. This skill reads CI facts; it does not rerun tests.
-- Selected handoffs must contain a frozen `enforce_plan` and ready `ci_facts_contract`.
-- If selected handoffs contain `green` or `merged` tests, the CI facts file named by `ci_facts_contract.path` is required and must include exactly one result for each such test id.
 - Approved artifacts are not rewritten to pass a PR.
-- Every resolved finding must have a deterministic fingerprint in `feedback.json`.
-- Every resolved finding must also have a `class_key`; fix handoffs require class sweep evidence.
-- Re-enforce rounds must update `/tmp/eg/<run-id>/finding-ledger.json` before reporting.
 - One user request runs one review round. Maximum three rounds per task.
 
 ## Workflow
 
-At start, state `round N/3`.
+State `round N/3` at start. Reuse one run dir for the whole review/fix loop.
 
-Use one enforce run dir for the whole review/fix loop:
-
-- first round: create `/tmp/eg/<run-id>/`
-- fix handoff, closure evidence, and later rounds reuse the same `/tmp/eg/<run-id>/`
-- do not start a new run dir for round 2/3, or lifecycle history is lost
-
-Start completion criterion: either an existing enforce run dir is reused with its `finding-ledger.json`, or a new run dir is created for round 1 before selection starts.
-
-1. Gather PR context with `"$SKILL_DIR/scripts/pr-context.sh"` when needed.
-2. Select active handoffs:
+1. Create the run and gather PR context:
 
 ```bash
-python3 "$SKILL_DIR/scripts/select-handoffs.py" \
-  --repo-root <repo> \
-  --pr-context <pr-context.json> \
-  --out /tmp/eg/<run-id>/selected_handoffs.json
+$EG new enforce --repo-root <repo-root> --repo <name> --target <branch> [--source <branch>]
+$EG pr-context <run>          # writes diff.patch + pr-context.json
 ```
 
-3. Select Layer A quality context:
+2. Select active handoffs and quality context:
 
 ```bash
-python3 "$SKILL_DIR/scripts/select-quality-context.py" \
-  --diff <diff.patch> \
-  --repo-root <repo> \
-  --out /tmp/eg/<run-id>/quality-context.json
+$EG select <run>             # selected_handoffs.json + quality-context.json
 ```
 
-4. Run reviewers in parallel with fresh context and write:
-   - `/tmp/eg/<run-id>/layer-a-findings.json`
-   - `/tmp/eg/<run-id>/layer-b-findings.json`
+3. Run reviewers in parallel with **fresh context**, each writing its findings JSON into the run dir:
+   - Layer A (`layer-a-findings.json`): PR diff + quality protocol/rules + selected rule packs.
+   - Layer B (`layer-b-findings.json`): PR diff + artifact protocol + the repo's ADR/BDD/CONTEXT + selected handoffs.
 
-Reviewer JSON must match `findings.schema.json`. If schema is invalid, fix reviewer JSON and rerun `enforce.py`; do not change product code for schema errors.
-
-Review inputs:
-   - Layer A: PR diff + quality protocol/rules + selected rule packs.
-   - Layer B: PR diff + artifact protocol + ADR/BDD/CONTEXT + selected handoffs.
-5. Resolve gate:
-
-Read `CI-FACTS-FORMAT.md` before supplying `--facts`.
+   `eg schema findings` gives the shape. Guard them before the gate:
 
 ```bash
-python3 "$SKILL_DIR/scripts/enforce.py" \
-  --findings /tmp/eg/<run-id>/layer-a-findings.json \
-  --findings /tmp/eg/<run-id>/layer-b-findings.json \
-  --facts <ci-facts.json> \
-  --handoffs /tmp/eg/<run-id>/selected_handoffs.json \
-  --profile <enforcement.yml> \
-  --artifacts-root <repo> \
-  --out /tmp/eg/<run-id>/feedback.json
+$EG check <run>              # rejects malformed / placeholder findings
 ```
 
-6. Update finding lifecycle ledger:
+4. Resolve the gate (reads CI facts; enforce.py owns the verdict; also updates the finding lifecycle ledger):
 
 ```bash
-python3 "$SKILL_DIR/scripts/update-finding-ledger.py" \
-  --feedback /tmp/eg/<run-id>/feedback.json \
-  --closure-evidence /tmp/eg/<run-id>/closure-evidence.json \
-  --out /tmp/eg/<run-id>/finding-ledger.json
+$EG enforce <run> --facts <ci-facts.json>
 ```
 
-Omit `--closure-evidence` when no fix agent has run yet. Omit `--round`; the script derives the next round from the existing ledger and rejects rounds after 3.
+`eg enforce` exit 1 means the gate is blocked (a valid result), exit 2 means a contract/input error — stop and report the exact missing input (e.g. a missing or duplicate CI fact).
 
-Exit handling:
+5. Notify best-effort and report:
 
-- `select-handoffs.py` exit 1: no active handoff; stop and ask whether to return to `eg-tdd`.
-- any script exit 2: contract/input error; stop and report the exact missing or invalid input.
-- `enforce.py` exit 1: gate is blocked, not a script failure; continue to update finding ledger and report.
-- `enforce.py` exit 0: continue to update finding ledger and report.
-
-7. Notify human best-effort with `"$SKILL_DIR/scripts/notify.py"`; pass `--ledger /tmp/eg/<run-id>/finding-ledger.json` when available.
-8. Report summary and ask one next question.
-
-Round completion criterion: the run stops only after a contract error is reported, or after `feedback.json` and `finding-ledger.json` both exist and the summary asks exactly one next question.
+```bash
+$EG notify <run>             # dry-run digest by default; --send to deliver
+```
 
 ## Round Summary
 
 Report:
 
-- gate and merge blocked status
+- gate and merge-blocked status
 - lifecycle buckets first: regression, partial-fix, persisted, new, closed
 - blocking findings grouped by next action
-- human decisions
-- agent-fixable findings
-- manual QA items
+- human decisions, agent-fixable findings, manual QA items
 - residual risks or missing inputs
 
 Missing or duplicate CI facts are contract errors, not findings. Stop and report the input problem.
 
-Ask exactly one next question:
+## One Next Question
+
+Ask exactly one, by priority:
 
 1. Human decision if any exists.
-2. Else ask whether to generate `/tmp/eg/<run-id>/fix-handoff.md` for open agent-fixable ledger findings.
-3. Else ask whether to prepare manual QA checklist.
-4. Else report pass/no action.
+2. Else whether to generate the fix handoff for open agent-fixable findings.
+3. Else whether to prepare a manual QA checklist.
+4. Else report pass / no action.
 
-If the user approves fix handoff, generate it from the ledger:
+If the user approves the fix handoff, generate it from the ledger:
 
 ```bash
-python3 "$SKILL_DIR/scripts/write-fix-handoff.py" \
-  --ledger /tmp/eg/<run-id>/finding-ledger.json \
-  --repo-root <repo> \
-  --pr-context /tmp/eg/<run-id>/pr-context.json \
-  --diff /tmp/eg/<run-id>/diff.patch \
-  --handoffs /tmp/eg/<run-id>/selected_handoffs.json \
-  --feedback /tmp/eg/<run-id>/feedback.json \
-  --out /tmp/eg/<run-id>/fix-handoff.md
+$EG fix-handoff <run>        # -> fix-handoff.md from finding-ledger.json
 ```
 
-Then invoke `handoff` only if conversation context must be compacted for another agent. The generated file is the source of truth and must include closure evidence requirements and class sweep scope. The fix agent must write `/tmp/eg/<run-id>/closure-evidence.json`, verify, auto-commit only fix-scope files, run `"$SKILL_DIR/scripts/validate-fix-commit-scope.py"`, and stop if the fix requires changing approved ADR/BDD substance.
+The generated file is the source of truth; it carries fingerprints, closure
+requirements, and class-sweep scope. The fix agent must write
+`closure-evidence.json`, verify, auto-commit only fix-scope files, and stop if a
+fix requires changing approved ADR/BDD substance. The next round consumes the
+closure evidence.
 
 Then stop. Do not fix, rerun, apply overrides, update artifacts, or start another round unless the user asks.

@@ -1,6 +1,6 @@
 ---
 name: eg-precipitate
-description: EG precipitation stage: grill intent, scope, terms, decisions, and constraints into CONTEXT/ADR artifacts.
+description: "EG precipitation stage: grill intent, scope, terms, decisions, and constraints into CONTEXT/ADR artifacts."
 disable-model-invocation: true
 ---
 
@@ -8,108 +8,118 @@ disable-model-invocation: true
 
 Make intent governable. Do not implement, write BDD, run tests, or enforce gates.
 
-Set:
+The `eg` CLI owns ADR/CONTEXT format, scaffolding, validation, and the seal gate.
+You own the grilling and the semantics. Author artifacts as structured data; do
+not hand-write `.md`, and do not read format docs to learn field shapes — run
+`eg schema <kind>` when unsure.
 
 ```bash
-SKILL_DIR="$(readlink -f .agents/skills/eg-precipitate)"
+EG="python3 $(readlink -f .agents/skills/eg)/cli/eg.py"
 ```
 
-Read shared rules only when the current step needs the contract:
+Read judgment references for the current branch (format is in the CLI, not docs):
 
-- `../eg/references/METHOD.md`
-- `../eg/references/ARTIFACT-MODEL.md`
-- `../eg/references/STAGE-HANDOFF.md`
-
-Load local references only for the current branch:
-
-- Interaction and decision tree pressure: `references/interaction-protocol.md`
+- Interaction and decision-tree pressure: `references/interaction-protocol.md`
 - Artifact eligibility: `references/precipitation-triggers.md`
-- CONTEXT/ADR formats: `references/artifact-formats.md`
 - NFR checkpoint: `references/nfr-checklist.md`
 - Failure modes: `references/failure-modes.md`
+- Shared method: `../eg/references/METHOD.md`, `STAGE-HANDOFF.md`
+
+## Storage
+
+You author ADR/CONTEXT as data under `/tmp/eg/<run>/`. `eg seal` commits the
+**data** as the source of truth — `docs/adr/NNNN-slug.yml`, `CONTEXT.yml` — and
+renders a git-ignored `.md` beside it for humans and the legacy `.md` readers
+(it refuses unless validation passes). The rendered `.md` is regenerated on
+demand (`eg render-all <repo>`), never committed. Commit the `.yml`, not the `.md`.
+
+## Write contract
+
+- `eg adr-new <run> --type intent|decision|constraint --title "..." [--domain ...]` — reserve the next ADR number and scaffold its data.
+- `eg merge <run> <artifact>` — fold a YAML fragment (stdin) into `context` or `adr-NNNN`. One fragment, one call.
+- `eg set <run> <artifact> <path> <value>` — single scalar tweak (e.g. `eg set <run> adr-0001 status approved`).
+- Unknown yet? Use `defer: <reason>`. Silent `TBD`/empty is rejected.
+- `eg check <run> [artifact]` — gaps + deferrals. `eg render <run> <artifact>` — human preview without touching the repo. `eg schema context|adr-intent|adr-decision|adr-constraint` — fields and enums.
 
 ## Loop
 
-Walk the decision tree one branch at a time until shared understanding is stable enough for the next stage.
+Walk the decision tree one branch at a time until a conclusion is stable enough
+to govern future work. Use the per-turn shape in `interaction-protocol.md`: state
+the decision in plain language, recommend an answer, ask one hard question. If
+code or existing artifacts can answer it, inspect them instead of asking.
 
-Branch completion criterion: a branch is resolved only when it has an explicit term, scope boundary, decision, constraint, non-goal, or defer reason. A plausible answer is not enough.
+A branch is resolved only when it has an explicit term, scope boundary, decision,
+constraint, non-goal, or defer reason. A plausible answer is not enough.
 
-Per turn:
+## Workflow
 
-```md
-Current decision: ...
-Decision tree state:
-- Resolved: ...
-- Active branch: ...
-- Unresolved: ...
-- Blocked: ...
-
-Recommended answer: ...
-Hard question: ...
-Potential write: ...
-```
-
-Ask one hard question. If code or existing artifacts can answer it, inspect them instead of asking.
-
-## Write Policy
-
-Default: do not write.
-
-Write only when a term, scope boundary, decision, or constraint is stable enough to govern future work.
-
-Use one confirmation:
-
-```md
-Write preview:
-- Artifact: CONTEXT.md | ADR
-- Content: ...
-- Reason: ...
-
-Confirm write?
-```
-
-After confirmation, write immediately. Do not ask again unless the preview is no longer accurate, the path conflicts, multiple artifacts were not all confirmed, or approved artifact substance would change.
-
-For ADR creation, use deterministic numbering:
+1. Create the run:
 
 ```bash
-python3 "$SKILL_DIR/scripts/new-adr.py" --repo-root <repo> --title "<title>" --type intent --status approved
-python3 "$SKILL_DIR/scripts/new-adr.py" --repo-root <repo> --title "<title>" --type decision --status approved
-python3 "$SKILL_DIR/scripts/new-adr.py" --repo-root <repo> --title "<title>" --type constraint --domain security --status approved
+$EG new precipitate --repo-root <repo-root> --task <task-slug>
 ```
 
-After writing or editing ADRs, validate them:
+2. Grill. Default to not writing. Inspect existing `CONTEXT.md` and `docs/adr/` first.
+
+3. Write when stable, after a one-step preview + user confirmation:
+
+- Term resolved → `eg merge <run> context` (name, description, terms).
+- Business scope confirmed → `eg adr-new <run> --type intent --title "..."`, then merge `context`, `decision`, `in_scope`, `out_of_scope`, `non_goals`, and `acceptance_seed`.
+- Hard-to-reverse choice with real tradeoffs → `--type decision`.
+- Confirmed NFR → `--type constraint --domain <domain>`.
 
 ```bash
-python3 "$SKILL_DIR/scripts/validate-precipitation.py" <repo>/docs/adr/0001-title.md --require-seed
+$EG adr-new <run> --type intent --title "Reset Password Flow"
+cat <<'YAML' | $EG merge <run> adr-0001
+context: "<why this came up>"
+decision: "<agreed scope>"
+in_scope: ["<capability>"]
+out_of_scope: ["<deferred neighbour>"]
+non_goals: ["<explicitly rejected>"]
+acceptance_seed: ["<observable outcome for later BDD>"]
+YAML
 ```
 
-Use `--require-seed` for intent ADRs that should hand off to `eg-tdd`.
+4. Before closing an intent ADR, ask the NFR checklist once (`nfr-checklist.md`). Each confirmed item becomes a `constraint` ADR.
 
-Write completion criterion: the confirmed artifact exists at the previewed path, validation passed, and any validation failure is reported before asking the next decision question.
+5. Check and seal each artifact. `eg seal` is the hard gate — it renders to the repo only if the data check AND the original ADR validator pass:
 
-## Artifact Rules
-
-- `CONTEXT.md`: durable project language only.
-- Intent ADR: business scope and Acceptance Criteria Seed. Only intent ADRs can seed BDD.
-- Decision ADR: hard-to-reverse choices with tradeoffs. Never seed BDD.
-- Constraint ADR: explicit NFRs with domain.
-
-Before closing an intent ADR, ask the NFR checklist once.
+```bash
+$EG check <run> adr-0001
+$EG seal  <run> adr-0001     # -> docs/adr/0001-...md
+```
 
 ## Intent Approval Gate
 
-Before handing an intent ADR to `eg-tdd`, the write preview must include `status: approved`. After the user confirms, write the ADR and run `validate-precipitation.py --require-seed`.
+Keep intent ADR `status: review` until the user approves. Only `eg-tdd` consumes
+an approved intent with an Acceptance Criteria Seed. On approval:
 
-If the user is not ready to approve, keep `status: review`; `eg-tdd` may only draft/preview BDD and must not approve BDD, freeze plan, write tests, or implement.
+```bash
+$EG set  <run> adr-0001 status approved
+$EG seal <run> adr-0001     # seal enforces the seed for approved intent
+```
+
+If the user is not ready, keep `review`; `eg-tdd` may only draft/preview BDD.
+
+## Artifact Rules
+
+- `CONTEXT`: durable project language only — terms, definitions, rejected synonyms. No scope, decisions, or constraints.
+- Intent ADR: business scope (`In/Out/Non Goals`) and Acceptance Criteria Seed. Only intent ADRs seed BDD.
+- Decision ADR: hard-to-reverse choices with tradeoffs. Never seeds BDD.
+- Constraint ADR: explicit NFR with `domain`.
+
+The CLI enforces the countable structure (scope triple present, seed present for
+approved intent, no BDD in an ADR). You judge whether In Scope is a real boundary
+and whether Out of Scope pins the high-drift neighbours.
 
 ## Closing
 
 Summarize only:
 
-- resolved branches and written artifacts
-- intent ADRs ready for BDD derivation
-- decision ADRs and gates passed
-- constraint ADRs and domains
+- terms and ADRs sealed to the repo
+- intent ADRs approved and ready for BDD derivation
+- decision ADRs and constraint ADRs with domains
 - unresolved branches
 - next stage, usually `eg-tdd`
+
+Do not write BDD, run tests, enforce gates, or rewrite approved ADR substance.
