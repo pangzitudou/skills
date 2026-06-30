@@ -145,8 +145,8 @@ def adr_new(run_dir: Path, adr_type: str, title: str, status: str, domain: str |
         raise SystemExit(f"--type must be one of {sorted(precip_rules.TYPES)}")
     if status not in precip_rules.STATUSES:
         raise SystemExit(f"--status must be one of {sorted(precip_rules.STATUSES)}")
-    if adr_type == "constraint" and domain not in precip_rules.DOMAINS:
-        raise SystemExit(f"constraint --domain must be one of {sorted(precip_rules.DOMAINS)}")
+    if adr_type == "constraint" and not (isinstance(domain, str) and domain.strip()):
+        raise SystemExit("constraint --domain is required (any short domain label)")
     meta = _run_meta(run_dir)
     repo_root = Path(meta["repo_root"])
     allocated = list(meta.get("allocated_adrs", []))

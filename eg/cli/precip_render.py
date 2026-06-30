@@ -20,6 +20,20 @@ def render_adr(data: dict[str, Any]) -> str:
         fm.append(f"domain: {data.get('domain')}")
     fm.append("---")
 
+    title_line = ["", f"# {str(data.get('title') or '').strip()}", ""]
+
+    if "sections" in data:
+        # imported model: title + preamble + verbatim ## sections
+        out = title_line[:]
+        preamble = str(data.get("preamble") or "").strip()
+        if preamble:
+            out += [preamble, ""]
+        for s in data.get("sections") or []:
+            if not isinstance(s, dict):
+                continue
+            out += [f"## {str(s.get('heading') or '').strip()}", "", str(s.get("body") or "").strip(), ""]
+        return "\n".join(fm + out).rstrip() + "\n"
+
     body = [
         "",
         f"# {str(data.get('title') or '').strip()}",
