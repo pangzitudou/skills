@@ -141,6 +141,29 @@ def cmd_fix_handoff(args) -> int:
     return _wrap(args, stage_enforce.fix_handoff)
 
 
+def cmd_arch(args) -> int:
+    """Non-gating, standalone: refresh a repo's L1 architecture page via l1.py.
+    Triggered at PR-open (yunxiao-pr-manage), never inside the enforce gate. Best-
+    effort — a missing arch tool or l1.py failure returns 0, never blocking the PR
+    flow. Output lands in Obsidian, never in the reviewed repo. See 设计 §4b."""
+    import subprocess
+    from pathlib import Path
+    ws = Path(args.workspace_root).resolve()
+    arch_dir = Path(os.environ.get("ARCH_HOOK_DIR") or (ws / "saleforteai-arch"))
+    l1 = arch_dir / "l1.py"
+    if not l1.exists():
+        print(f"arch: unavailable (no {l1}); non-gating, skipping", file=sys.stderr)
+        return 0
+    env = {**os.environ, "ARCH_ROOT": str(ws)}
+    proc = subprocess.run([sys.executable, str(l1), args.repo], cwd=str(arch_dir),
+                          capture_output=True, text=True, env=env)
+    sys.stdout.write(proc.stdout)
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stderr)
+        print(f"arch: l1.py exit {proc.returncode} (non-gating; PR flow unaffected)", file=sys.stderr)
+    return 0  # best-effort: never propagate non-zero
+
+
 def cmd_render_all(args) -> int:
     from pathlib import Path
     out = mirror.render_all(Path(args.repo_root).resolve())
@@ -487,6 +510,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_fix = sub.add_parser("fix-handoff", help="generate fix-handoff.md from the finding ledger (enforce)")
     p_fix.add_argument("run")
     p_fix.set_defaults(func=cmd_fix_handoff)
+
+    p_arch = sub.add_parser("arch", help="refresh a repo's L1 architecture page via l1.py (non-gating, standalone)")
+    p_arch.add_argument("--repo", required=True, help="repo name under the workspace, e.g. saleforteai-saler")
+    p_arch.add_argument("--workspace-root", default="/home/zenia/projects/gnzs",
+                        help="monorepo root holding sibling repos + saleforteai-arch")
+    p_arch.set_defaults(func=cmd_arch)
 
     p_ra = sub.add_parser("render-all", help="regenerate docs/adr|bdd/*.md + CONTEXT.md from committed *.yml")
     p_ra.add_argument("repo_root")
