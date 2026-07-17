@@ -44,8 +44,32 @@ def validate_adr(data: dict[str, Any], *, require_seed: bool = False) -> list[st
         errors.append("adr.title is required")
     if not filled_str(data.get("slug")):
         errors.append("adr.slug is required")
-    if adr_type == "constraint" and data.get("domain") not in DOMAINS:
-        errors.append(f"constraint adr.domain must be one of {sorted(DOMAINS)}")
+    # domain vocabulary is open (saler uses reliability/... beyond eg's set); only
+    # require a constraint to declare one.
+    if adr_type == "constraint" and not filled_str(data.get("domain")):
+        errors.append("constraint adr.domain is required")
+
+    if "sections" in data:
+        # imported model: ordered prose sections, losslessly preserved
+        secs = data.get("sections")
+        if not isinstance(secs, list) or not secs:
+            errors.append("adr.sections must be a non-empty list")
+            return errors
+        for i, s in enumerate(secs):
+            if not isinstance(s, dict):
+                errors.append(f"adr.sections[{i}] must be an object")
+                continue
+            if not filled_str(s.get("heading")):
+                errors.append(f"adr.sections[{i}].heading is required")
+            if not filled_str(s.get("body")):
+                errors.append(f"adr.sections[{i}].body is required")
+            if not _no_bdd(s.get("body")):
+                errors.append(f"adr.sections[{i}] must not contain BDD scenarios or Given/When/Then")
+        if not _no_bdd(data.get("preamble")):
+            errors.append("adr.preamble must not contain BDD scenarios or Given/When/Then")
+        return errors
+
+    # discrete model (eg-authored)
     for key in ("context", "decision"):
         if not filled_str(data.get(key)):
             errors.append(f"adr.{key} is required and non-empty")

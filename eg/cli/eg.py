@@ -30,10 +30,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import yaml  # noqa: E402
 
+import adr_import  # noqa: E402
 import bdd_import  # noqa: E402
 import lint as lint_mod  # noqa: E402
 import mirror  # noqa: E402
 import registry  # noqa: E402
+import scenario as scenario_mod  # noqa: E402
 import stage_enforce  # noqa: E402
 import stage_precipitate  # noqa: E402
 import stage_tdd  # noqa: E402
@@ -139,6 +141,29 @@ def cmd_fix_handoff(args) -> int:
     return _wrap(args, stage_enforce.fix_handoff)
 
 
+def cmd_arch(args) -> int:
+    """Non-gating, standalone: refresh a repo's L1 architecture page via l1.py.
+    Triggered at PR-open (yunxiao-pr-manage), never inside the enforce gate. Best-
+    effort — a missing arch tool or l1.py failure returns 0, never blocking the PR
+    flow. Output lands in Obsidian, never in the reviewed repo. See 设计 §4b."""
+    import subprocess
+    from pathlib import Path
+    ws = Path(args.workspace_root).resolve()
+    arch_dir = Path(os.environ.get("ARCH_HOOK_DIR") or (ws / "saleforteai-arch"))
+    l1 = arch_dir / "l1.py"
+    if not l1.exists():
+        print(f"arch: unavailable (no {l1}); non-gating, skipping", file=sys.stderr)
+        return 0
+    env = {**os.environ, "ARCH_ROOT": str(ws)}
+    proc = subprocess.run([sys.executable, str(l1), args.repo], cwd=str(arch_dir),
+                          capture_output=True, text=True, env=env)
+    sys.stdout.write(proc.stdout)
+    if proc.returncode != 0:
+        sys.stderr.write(proc.stderr)
+        print(f"arch: l1.py exit {proc.returncode} (non-gating; PR flow unaffected)", file=sys.stderr)
+    return 0  # best-effort: never propagate non-zero
+
+
 def cmd_render_all(args) -> int:
     from pathlib import Path
     out = mirror.render_all(Path(args.repo_root).resolve())
@@ -177,6 +202,65 @@ def cmd_bdd_import(args) -> int:
             print(f"  ! {w}", file=sys.stderr)
             warned += 1
     print(f"imported {len(args.files)} file(s); {warned} warning(s). Run: eg check <run> per file or review the .yml.")
+    return 0
+
+
+def cmd_scenario_new(args) -> int:
+    from pathlib import Path
+    out, warnings = scenario_mod.new_draft(Path(args.repo_root).resolve(), args.name, args.derived_from)
+    print(out)
+    for w in warnings:
+        print(f"  ! {w}", file=sys.stderr)
+    print("fill description/behavior/setup/steps/expect (参考一个相近的已批准 scenario), then: eg scenario-check")
+    return 0
+
+
+def cmd_scenario_check(args) -> int:
+    from pathlib import Path
+    import json
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else None
+    rc = 0
+    for f in args.files:
+        data = json.loads(Path(f).read_text(encoding="utf-8"))
+        errors = scenario_mod.validate_scenario(data, repo_root)
+        if errors:
+            print(f"{f}:", file=sys.stderr)
+            for e in errors:
+                print(f"  - {e}", file=sys.stderr)
+            rc = 1
+        else:
+            print(f"{f}: OK (header + structure; harness schema validated by ScenarioRunnerTest)")
+    return rc
+
+
+def cmd_scenario_promote(args) -> int:
+    from pathlib import Path
+    repo_root = Path(args.repo_root).resolve()
+    cleaned, errors = scenario_mod.promote(Path(args.draft), repo_root)
+    if errors:
+        print("not ready to promote:", file=sys.stderr)
+        for e in errors:
+            print(f"  - {e}", file=sys.stderr)
+        return 1
+    m = __import__("re").search(r"(\d+)_(.+)\.json$", cleaned.name)
+    target = repo_root / scenario_mod.SCENARIO_DIR / f"{m.group(1)}_{m.group(2)}.json"
+    print(f"validated + cleaned -> {cleaned}")
+    print("agent 被 deny 拦，由人执行最后一步：")
+    print(f"  mv {cleaned} {target}")
+    return 0
+
+
+def cmd_adr_import(args) -> int:
+    from pathlib import Path
+    repo_root = Path(args.repo_root).resolve()
+    warned = 0
+    for f in args.files:
+        result, warnings = adr_import.import_md(repo_root, Path(f), args.remove_source)
+        print(f"{result['id']} ({result['type']}) -> {result['yml']}  ({result['sections']} sections)")
+        for w in warnings:
+            print(f"  ! {w}", file=sys.stderr)
+            warned += 1
+    print(f"imported {len(args.files)} ADR(s); {warned} warning(s). Then: eg lint docs/adr")
     return 0
 
 
@@ -427,6 +511,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_fix.add_argument("run")
     p_fix.set_defaults(func=cmd_fix_handoff)
 
+    p_arch = sub.add_parser("arch", help="refresh a repo's L1 architecture page via l1.py (non-gating, standalone)")
+    p_arch.add_argument("--repo", required=True, help="repo name under the workspace, e.g. saleforteai-saler")
+    p_arch.add_argument("--workspace-root", default="/home/zenia/projects/gnzs",
+                        help="monorepo root holding sibling repos + saleforteai-arch")
+    p_arch.set_defaults(func=cmd_arch)
+
     p_ra = sub.add_parser("render-all", help="regenerate docs/adr|bdd/*.md + CONTEXT.md from committed *.yml")
     p_ra.add_argument("repo_root")
     p_ra.set_defaults(func=cmd_render_all)
@@ -440,6 +530,28 @@ def build_parser() -> argparse.ArgumentParser:
     p_bi.add_argument("--remove-source", action="store_true", help="delete the old .md after import")
     p_bi.add_argument("files", nargs="+", help="legacy BDD .md file(s)")
     p_bi.set_defaults(func=cmd_bdd_import)
+
+    p_sn = sub.add_parser("scenario-new", help="scaffold a /tmp scenario draft with the next free number")
+    p_sn.add_argument("--repo-root", required=True)
+    p_sn.add_argument("--name", required=True, help="snake_case scenario name")
+    p_sn.add_argument("--derived-from", nargs="+", default=[], help="constraining ADR id(s), e.g. ADR-0012")
+    p_sn.set_defaults(func=cmd_scenario_new)
+
+    p_sc = sub.add_parser("scenario-check", help="structure-check a scenario draft (header + steps/expect present)")
+    p_sc.add_argument("--repo-root", help="repo root for derived_from ADR resolution")
+    p_sc.add_argument("files", nargs="+", help="scenario draft .json")
+    p_sc.set_defaults(func=cmd_scenario_check)
+
+    p_sp = sub.add_parser("scenario-promote", help="validate + clean a draft; print the human move command")
+    p_sp.add_argument("--repo-root", required=True)
+    p_sp.add_argument("draft", help="/tmp scenario draft .json")
+    p_sp.set_defaults(func=cmd_scenario_promote)
+
+    p_ai = sub.add_parser("adr-import", help="convert legacy ADR .md into eg .yml (sections form)")
+    p_ai.add_argument("--repo-root", required=True)
+    p_ai.add_argument("--remove-source", action="store_true", help="delete the old .md after import")
+    p_ai.add_argument("files", nargs="+", help="legacy ADR .md file(s)")
+    p_ai.set_defaults(func=cmd_adr_import)
 
     p_merge = sub.add_parser("merge", help="merge a YAML fragment (stdin) into an artifact")
     p_merge.add_argument("run")
